@@ -13,9 +13,15 @@ pub struct Asset {
     pub salvage_value: Decimal,
     pub useful_life: u32, // years
     pub depreciation_method: DepreciationMethod,
+    #[serde(default)]
+    pub prior_depreciation_years: u32,
+    #[serde(default)]
+    pub prior_depreciation_months: u32,
     pub location: String,
     pub description: String,
     pub status: AssetStatus,
+    #[serde(default)]
+    pub tags: Vec<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -29,8 +35,11 @@ impl Asset {
         salvage_value: Decimal,
         useful_life: u32,
         depreciation_method: DepreciationMethod,
+        prior_depreciation_years: u32,
+        prior_depreciation_months: u32,
         location: String,
         description: String,
+        tags: Vec<String>,
     ) -> Self {
         let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
         Self {
@@ -42,12 +51,20 @@ impl Asset {
             salvage_value,
             useful_life,
             depreciation_method,
+            prior_depreciation_years,
+            prior_depreciation_months,
             location,
             description,
             status: AssetStatus::InUse,
+            tags,
             created_at: now.clone(),
             updated_at: now,
         }
+    }
+
+    /// Total prior depreciation in months
+    pub fn prior_months_total(&self) -> u32 {
+        self.prior_depreciation_years * 12 + self.prior_depreciation_months
     }
 
     pub fn acquisition_date_parsed(&self) -> Option<NaiveDate> {

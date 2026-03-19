@@ -13,103 +13,227 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
     let category_key = asset.category.i18n_key().to_string();
     let method_key = asset.depreciation_method.i18n_key().to_string();
 
-    let years_elapsed = if let Some(acq) = asset.acquisition_date_parsed() {
+    let prior_months = asset.prior_months_total();
+    let prior_years_full = prior_months / 12;
+
+    let own_years = if let Some(acq) = asset.acquisition_date_parsed() {
         let today = chrono::Utc::now().date_naive();
         let days = (today - acq).num_days();
         (days as f64 / 365.25) as u32
     } else {
         0
     };
+    let total_years_elapsed = prior_years_full + own_years;
 
-    let acc_dep = depreciation::accumulated_depreciation(&asset, years_elapsed);
-    let book_val = depreciation::current_book_value(&asset, years_elapsed);
+    let acc_dep = depreciation::accumulated_depreciation(&asset, total_years_elapsed);
+    let book_val = depreciation::current_book_value(&asset, total_years_elapsed);
+    let annual_expense = depreciation::current_year_expense(&asset, total_years_elapsed);
 
     let cost_str = format_currency(&asset.cost);
     let book_val_str = format_currency(&book_val);
     let acc_dep_str = format_currency(&acc_dep);
     let salvage_str = format_currency(&asset.salvage_value);
+    let annual_expense_str = format_currency(&annual_expense);
+    let depreciation_done = annual_expense == rust_decimal::Decimal::ZERO;
     let acq_date = asset.acquisition_date.clone();
-    let useful_life_str = format!("{} years", asset.useful_life);
+    let useful_life_str = format!("{}{}", asset.useful_life, i18n.t("asset.years"));
     let method_val = i18n.t(&method_key);
     let location = asset.location.clone();
     let description = asset.description.clone();
     let has_location = !asset.location.is_empty();
     let has_description = !asset.description.is_empty();
+    let has_prior = prior_months > 0;
+    let tags = asset.tags.clone();
+    let has_tags = !tags.is_empty();
+    let prior_str = if asset.prior_depreciation_months > 0 {
+        format!("{}{} {}{}", asset.prior_depreciation_years, i18n.t("asset.years"), asset.prior_depreciation_months, i18n.t("asset.months"))
+    } else {
+        format!("{}{}", asset.prior_depreciation_years, i18n.t("asset.years"))
+    };
+
+    // Collapsible section states
+    let show_financials = RwSignal::new(false);
+    let show_details = RwSignal::new(false);
+    let show_schedule = RwSignal::new(false);
 
     view! {
-        <div class="space-y-4">
-            <div class="card">
-                <div class="flex items-start justify-between mb-3">
-                    <h2 class="text-xl font-bold text-gray-900">{asset.name.clone()}</h2>
-                    <span class=status_class>{move || i18n.t(&status_key)}</span>
+        <div class="space-y-3">
+            // Header: name + status + category + tags in one compact card
+            <div class="card py-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 min-w-0 mr-2">
+                        <h2 class="text-lg font-bold text-gray-900 truncate">{asset.name.clone()}</h2>
+                        <p class="text-xs text-gray-500">{move || i18n.t(&category_key)}</p>
+                    </div>
+                    <span class=format!("{} shrink-0", status_class)>{move || i18n.t(&status_key)}</span>
                 </div>
-                <p class="text-sm text-gray-500">{move || i18n.t(&category_key)}</p>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-                <div class="card text-center">
-                    <p class="text-xs text-gray-500 mb-1">{move || i18n.t("asset.cost")}</p>
-                    <p class="text-lg font-bold text-gray-900">{cost_str.clone()}</p>
-                </div>
-                <div class="card text-center">
-                    <p class="text-xs text-gray-500 mb-1">{move || i18n.t("asset.book_value")}</p>
-                    <p class="text-lg font-bold text-blue-600">{book_val_str.clone()}</p>
-                </div>
-                <div class="card text-center">
-                    <p class="text-xs text-gray-500 mb-1">{move || i18n.t("asset.accumulated_depreciation")}</p>
-                    <p class="text-lg font-bold text-orange-600">{acc_dep_str.clone()}</p>
-                </div>
-                <div class="card text-center">
-                    <p class="text-xs text-gray-500 mb-1">{move || i18n.t("asset.salvage_value")}</p>
-                    <p class="text-lg font-bold text-gray-600">{salvage_str.clone()}</p>
-                </div>
-            </div>
-
-            <div class="card space-y-3">
-                <DetailRow label=Signal::derive(move || i18n.t("asset.acquisition_date")) value=acq_date.clone() />
-                <DetailRow label=Signal::derive(move || i18n.t("asset.useful_life")) value=useful_life_str.clone() />
-                <DetailRow label=Signal::derive(move || i18n.t("asset.depreciation_method")) value=method_val.clone() />
-                {if has_location {
-                    Some(view! { <DetailRow label=Signal::derive(move || i18n.t("asset.location")) value=location.clone() /> })
-                } else {
-                    None
-                }}
-                {if has_description {
-                    Some(view! { <DetailRow label=Signal::derive(move || i18n.t("asset.description")) value=description.clone() /> })
+                {if has_tags {
+                    let tags = tags.clone();
+                    Some(view! {
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            {tags.into_iter().map(|tag| {
+                                view! { <span class="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{tag}</span> }
+                            }).collect::<Vec<_>>()}
+                        </div>
+                    })
                 } else {
                     None
                 }}
             </div>
 
+            // Primary info: book value + annual expense (always visible, compact)
+            <div class="card py-3">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="text-center">
+                        <p class="text-[10px] text-gray-400 uppercase tracking-wide">{move || i18n.t("asset.book_value")}</p>
+                        <p class="text-xl font-bold text-blue-600 mt-0.5">{book_val_str.clone()}</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-[10px] text-gray-400 uppercase tracking-wide">{move || i18n.t("depreciation.annual_expense")}</p>
+                        {if depreciation_done {
+                            view! { <p class="text-sm font-bold text-green-600 mt-1">{move || i18n.t("depreciation.fully_depreciated")}</p> }.into_any()
+                        } else {
+                            view! { <p class="text-xl font-bold text-red-600 mt-0.5">{annual_expense_str.clone()}</p> }.into_any()
+                        }}
+                    </div>
+                </div>
+            </div>
+
+            // Collapsible: Financial breakdown
+            <div class="card py-0 overflow-hidden">
+                <button
+                    class="w-full flex items-center justify-between py-3 active:bg-gray-50"
+                    on:click=move |_| show_financials.update(|v| *v = !*v)
+                >
+                    <span class="text-sm font-semibold text-gray-900">{move || i18n.t("asset.financial_summary")}</span>
+                    <svg
+                        class=move || format!("w-4 h-4 text-gray-400 transition-transform {}", if show_financials.get() { "rotate-180" } else { "" })
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                {move || if show_financials.get() {
+                    view! {
+                        <div class="pb-3 space-y-2 border-t border-gray-100 pt-2">
+                            <CompactRow label=Signal::derive(move || i18n.t("asset.cost")) value=cost_str.clone() />
+                            <CompactRow label=Signal::derive(move || i18n.t("asset.accumulated_depreciation")) value=acc_dep_str.clone() />
+                            <CompactRow label=Signal::derive(move || i18n.t("asset.book_value")) value=book_val_str.clone() />
+                            <CompactRow label=Signal::derive(move || i18n.t("asset.salvage_value")) value=salvage_str.clone() />
+                        </div>
+                    }.into_any()
+                } else {
+                    view! { <div></div> }.into_any()
+                }}
+            </div>
+
+            // Collapsible: Asset details
+            <div class="card py-0 overflow-hidden">
+                <button
+                    class="w-full flex items-center justify-between py-3 active:bg-gray-50"
+                    on:click=move |_| show_details.update(|v| *v = !*v)
+                >
+                    <span class="text-sm font-semibold text-gray-900">{move || i18n.t("asset.info")}</span>
+                    <svg
+                        class=move || format!("w-4 h-4 text-gray-400 transition-transform {}", if show_details.get() { "rotate-180" } else { "" })
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                {move || if show_details.get() {
+                    let acq_date = acq_date.clone();
+                    let useful_life_str = useful_life_str.clone();
+                    let method_val = method_val.clone();
+                    let prior_str = prior_str.clone();
+                    let location = location.clone();
+                    let description = description.clone();
+                    view! {
+                        <div class="pb-3 space-y-2 border-t border-gray-100 pt-2">
+                            <CompactRow label=Signal::derive(move || i18n.t("asset.acquisition_date")) value=acq_date.clone() />
+                            <CompactRow label=Signal::derive(move || i18n.t("asset.useful_life")) value=useful_life_str.clone() />
+                            <CompactRow label=Signal::derive(move || i18n.t("asset.depreciation_method")) value=method_val.clone() />
+                            {if has_prior {
+                                let prior_str = prior_str.clone();
+                                Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.prior_depreciation")) value=prior_str.clone() /> })
+                            } else {
+                                None
+                            }}
+                            {if has_location {
+                                let location = location.clone();
+                                Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.location")) value=location.clone() /> })
+                            } else {
+                                None
+                            }}
+                            {if has_description {
+                                let description = description.clone();
+                                Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.description")) value=description.clone() /> })
+                            } else {
+                                None
+                            }}
+                        </div>
+                    }.into_any()
+                } else {
+                    view! { <div></div> }.into_any()
+                }}
+            </div>
+
+            // Collapsible: Depreciation schedule
             {if !schedule.is_empty() {
                 Some(view! {
-                    <div class="card">
-                        <h3 class="font-semibold text-gray-900 mb-3">{move || i18n.t("depreciation.schedule")}</h3>
-                        <div class="overflow-x-auto -mx-4 px-4">
-                            <table class="w-full text-sm">
-                                <thead>
-                                    <tr class="border-b border-gray-200">
-                                        <th class="text-left py-2 text-gray-500 font-medium">{move || i18n.t("depreciation.year")}</th>
-                                        <th class="text-right py-2 text-gray-500 font-medium">{move || i18n.t("depreciation.opening_value")}</th>
-                                        <th class="text-right py-2 text-gray-500 font-medium">{move || i18n.t("depreciation.expense")}</th>
-                                        <th class="text-right py-2 text-gray-500 font-medium">{move || i18n.t("depreciation.closing_value")}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {schedule.into_iter().map(|row| {
-                                        let row_class = if row.year == years_elapsed { "bg-blue-50" } else { "" };
-                                        view! {
-                                            <tr class=format!("border-b border-gray-100 {}", row_class)>
-                                                <td class="py-2">{row.year}</td>
-                                                <td class="text-right py-2">{format_currency(&row.opening_value)}</td>
-                                                <td class="text-right py-2 text-orange-600">{format_currency(&row.expense)}</td>
-                                                <td class="text-right py-2">{format_currency(&row.closing_value)}</td>
-                                            </tr>
-                                        }
-                                    }).collect::<Vec<_>>()}
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="card py-0 overflow-hidden">
+                        <button
+                            class="w-full flex items-center justify-between py-3 active:bg-gray-50"
+                            on:click=move |_| show_schedule.update(|v| *v = !*v)
+                        >
+                            <span class="text-sm font-semibold text-gray-900">{move || i18n.t("depreciation.schedule")}</span>
+                            <svg
+                                class=move || format!("w-4 h-4 text-gray-400 transition-transform {}", if show_schedule.get() { "rotate-180" } else { "" })
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        {move || if show_schedule.get() {
+                            let schedule = depreciation::calculate_schedule(&asset);
+                            view! {
+                                <div class="pb-3 border-t border-gray-100 pt-2">
+                                    <div class="overflow-x-auto -mx-4 px-4">
+                                        <table class="w-full text-xs">
+                                            <thead>
+                                                <tr class="border-b border-gray-200">
+                                                    <th class="text-left py-1.5 text-gray-400 font-medium">{move || i18n.t("depreciation.year")}</th>
+                                                    <th class="text-right py-1.5 text-gray-400 font-medium">{move || i18n.t("depreciation.opening_value")}</th>
+                                                    <th class="text-right py-1.5 text-gray-400 font-medium">{move || i18n.t("depreciation.expense")}</th>
+                                                    <th class="text-right py-1.5 text-gray-400 font-medium">{move || i18n.t("depreciation.closing_value")}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {schedule.into_iter().map(|row| {
+                                                    let row_class = if row.is_prior {
+                                                        "bg-gray-50 text-gray-400"
+                                                    } else if row.year == total_years_elapsed {
+                                                        "bg-blue-50"
+                                                    } else {
+                                                        ""
+                                                    };
+                                                    view! {
+                                                        <tr class=format!("border-b border-gray-100 {}", row_class)>
+                                                            <td class="py-1.5">{row.year} {if row.is_prior { " *" } else { "" }}</td>
+                                                            <td class="text-right py-1.5">{format_currency(&row.opening_value)}</td>
+                                                            <td class="text-right py-1.5 text-orange-600">{format_currency(&row.expense)}</td>
+                                                            <td class="text-right py-1.5">{format_currency(&row.closing_value)}</td>
+                                                        </tr>
+                                                    }
+                                                }).collect::<Vec<_>>()}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            }.into_any()
+                        } else {
+                            view! { <div></div> }.into_any()
+                        }}
                     </div>
                 })
             } else {
@@ -120,14 +244,14 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
 }
 
 #[component]
-fn DetailRow(
+fn CompactRow(
     label: Signal<String>,
     #[prop(into)] value: String,
 ) -> impl IntoView {
     view! {
-        <div class="flex justify-between items-center py-1">
-            <span class="text-sm text-gray-500">{label}</span>
-            <span class="text-sm font-medium text-gray-900">{value}</span>
+        <div class="flex justify-between items-center px-0">
+            <span class="text-xs text-gray-500">{label}</span>
+            <span class="text-xs font-medium text-gray-900">{value}</span>
         </div>
     }
 }

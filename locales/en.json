@@ -39,7 +39,18 @@
     "login_as": "Login As",
     "no_accounts": "No registered accounts",
     "current_user": "Current User",
-    "back_to_app": "Back to App"
+    "back_to_app": "Back to App",
+    "plan": "Plan",
+    "paid": "Paid",
+    "free": "Free",
+    "toggle_plan": "Switch",
+    "wrong_password": "Incorrect password"
+  },
+  "plan": {
+    "free_limit_info": "Free plan: limited to 5 assets",
+    "limit_reached": "Asset Limit Reached",
+    "limit_message": "Free plan allows up to",
+    "upgrade_link": "Contact admin to upgrade"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -75,7 +86,16 @@
     "delete": "Delete",
     "accumulated_depreciation": "Accumulated Depreciation",
     "book_value": "Book Value",
-    "registered_date": "Registered"
+    "registered_date": "Registered",
+    "financial_summary": "Financial Details",
+    "info": "Asset Info",
+    "prior_depreciation": "Prior Depreciation",
+    "prior_depreciation_hint": "For used assets: already depreciated period before acquisition",
+    "years": " yrs",
+    "months": " mos",
+    "tags": "Tags",
+    "tag_placeholder": "Add tag and press Enter",
+    "tag_hint": "Press Enter or + to add a tag"
   },
   "category": {
     "building": "Building",
@@ -99,7 +119,9 @@
     "year": "Year",
     "opening_value": "Opening Value",
     "expense": "Expense",
-    "closing_value": "Closing Value"
+    "closing_value": "Closing Value",
+    "annual_expense": "Annual Depreciation",
+    "fully_depreciated": "Fully Depreciated"
   },
   "settings": {
     "title": "Settings",

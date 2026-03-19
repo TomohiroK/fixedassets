@@ -11,11 +11,30 @@ pub fn AssetRow(asset: Asset) -> impl IntoView {
     let cost = asset.cost;
     let status_class = asset.status.badge_class().to_string();
     let status_key = asset.status.i18n_key().to_string();
+    let tags = asset.tags.clone();
+    let has_tags = !tags.is_empty();
 
     view! {
         <a href=format!("/assets/{}", id) class="flex items-center justify-between py-3 px-4 active:bg-gray-50 transition-colors border-b border-gray-100">
             <div class="flex-1 min-w-0 mr-3">
                 <p class="text-sm font-medium text-gray-900 truncate">{name}</p>
+                {if has_tags {
+                    Some(view! {
+                        <div class="flex gap-1 mt-0.5 overflow-hidden">
+                            {tags.iter().take(3).map(|t| {
+                                let tag = t.clone();
+                                view! { <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full truncate max-w-[60px]">{tag}</span> }
+                            }).collect::<Vec<_>>()}
+                            {if tags.len() > 3 {
+                                Some(view! { <span class="text-[10px] text-gray-400">{format!("+{}", tags.len() - 3)}</span> })
+                            } else {
+                                None
+                            }}
+                        </div>
+                    })
+                } else {
+                    None
+                }}
             </div>
             <div class="flex items-center gap-2 shrink-0">
                 <span class="text-sm font-medium text-gray-700">{format_currency(&cost)}</span>

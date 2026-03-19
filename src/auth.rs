@@ -5,7 +5,11 @@ use serde::{Deserialize, Serialize};
 pub struct User {
     pub email: String,
     pub name: String,
+    #[serde(default)]
+    pub paid: bool,
 }
+
+pub const FREE_ASSET_LIMIT: usize = 5;
 
 #[derive(Clone, Copy, Debug)]
 pub struct AuthState {
@@ -25,10 +29,14 @@ impl AuthState {
         self.user.get().is_some()
     }
 
-    pub fn login(&self, email: String, name: String) {
-        let user = User { email, name };
+    pub fn login(&self, email: String, name: String, paid: bool) {
+        let user = User { email, name, paid };
         store_user(&user);
         self.user.set(Some(user));
+    }
+
+    pub fn is_paid(&self) -> bool {
+        self.user.get().map(|u| u.paid).unwrap_or(false)
     }
 
     pub fn signup(&self, email: String, name: String, _password: String) -> Result<(), String> {
@@ -45,12 +53,13 @@ impl AuthState {
             email: email.clone(),
             name: name.clone(),
             password: _password,
+            paid: false,
         });
 
         let json = serde_json::to_string(&users).unwrap_or_default();
         store_string("fa_users", &json);
 
-        self.login(email, name);
+        self.login(email, name, false);
         Ok(())
     }
 
@@ -60,7 +69,7 @@ impl AuthState {
 
         match users.iter().find(|u| u.email == email && u.password == password) {
             Some(u) => {
-                self.login(u.email.clone(), u.name.clone());
+                self.login(u.email.clone(), u.name.clone(), u.paid);
                 Ok(())
             }
             None => Err("Invalid email or password".to_string()),
@@ -74,10 +83,12 @@ impl AuthState {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-struct StoredUser {
-    email: String,
-    name: String,
-    password: String,
+pub struct StoredUser {
+    pub email: String,
+    pub name: String,
+    pub password: String,
+    #[serde(default)]
+    pub paid: bool,
 }
 
 fn get_stored_user() -> Option<User> {
@@ -125,22 +136,45 @@ fn seed_demo_accounts() {
             email: "demo@example.com".to_string(),
             name: "Demo User".to_string(),
             password: "demo123".to_string(),
+            paid: false,
         },
         StoredUser {
             email: "admin@example.com".to_string(),
             name: "Admin".to_string(),
             password: "admin123".to_string(),
+            paid: false,
         },
         StoredUser {
             email: "tanaka@example.com".to_string(),
             name: "田中太郎".to_string(),
             password: "tanaka123".to_string(),
+            paid: false,
         },
     ];
 
     if let Ok(json) = serde_json::to_string(&demo_users) {
         store_string("fa_users", &json);
     }
+}
+
+pub fn get_all_stored_users() -> Vec<StoredUser> {
+    let json = get_stored_string("fa_users").unwrap_or_else(|| "[]".to_string());
+    serde_json::from_str(&json).unwrap_or_default()
+}
+
+pub fn toggle_user_paid(email: &str) -> bool {
+    let mut users = get_all_stored_users();
+    let mut new_paid = false;
+    for u in users.iter_mut() {
+        if u.email == email {
+            u.paid = !u.paid;
+            new_paid = u.paid;
+        }
+    }
+    if let Ok(json) = serde_json::to_string(&users) {
+        store_string("fa_users", &json);
+    }
+    new_paid
 }
 
 pub fn use_auth() -> AuthState {

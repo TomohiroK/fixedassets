@@ -42,6 +42,7 @@ pub fn AssetListPage() -> impl IntoView {
                                 a.name.to_lowercase().contains(&query)
                                 || a.location.to_lowercase().contains(&query)
                                 || a.description.to_lowercase().contains(&query)
+                                || a.tags.iter().any(|t| t.to_lowercase().contains(&query))
                             }).collect()
                         };
 

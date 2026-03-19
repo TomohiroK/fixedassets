@@ -39,7 +39,18 @@
     "login_as": "としてログイン",
     "no_accounts": "登録されたアカウントがありません",
     "current_user": "現在のユーザー",
-    "back_to_app": "アプリに戻る"
+    "back_to_app": "アプリに戻る",
+    "plan": "プラン",
+    "paid": "有償",
+    "free": "無償",
+    "toggle_plan": "切替",
+    "wrong_password": "パスワードが正しくありません"
+  },
+  "plan": {
+    "free_limit_info": "無償プラン: 5件まで登録可能",
+    "limit_reached": "登録上限に達しました",
+    "limit_message": "無償プランの登録上限",
+    "upgrade_link": "管理者に連絡してアップグレード"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -75,7 +86,16 @@
     "delete": "削除",
     "accumulated_depreciation": "減価償却累計額",
     "book_value": "帳簿価額",
-    "registered_date": "登録日"
+    "registered_date": "登録日",
+    "financial_summary": "財務詳細",
+    "info": "資産情報",
+    "prior_depreciation": "償却済み期間",
+    "prior_depreciation_hint": "中古資産の場合：取得前に償却済みの期間",
+    "years": "年",
+    "months": "ヶ月",
+    "tags": "タグ",
+    "tag_placeholder": "タグを入力してEnter",
+    "tag_hint": "Enterまたは+でタグを追加"
   },
   "category": {
     "building": "建物",
@@ -99,7 +119,9 @@
     "year": "年度",
     "opening_value": "期首帳簿価額",
     "expense": "償却費",
-    "closing_value": "期末帳簿価額"
+    "closing_value": "期末帳簿価額",
+    "annual_expense": "当年度償却額",
+    "fully_depreciated": "償却完了"
   },
   "settings": {
     "title": "設定",
