@@ -1,0 +1,8 @@
+[build]
+dist = "dist"
+
+[watch]
+watch = ["src", "locales", "index.html", "input.css"]
+
+[serve]
+port = 8080

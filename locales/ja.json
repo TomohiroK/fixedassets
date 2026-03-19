@@ -1,0 +1,120 @@
+{
+  "app": {
+    "title": "固定資産管理"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "assets": "資産一覧",
+    "register": "登録",
+    "settings": "設定"
+  },
+  "landing": {
+    "headline": "スマート固定資産管理",
+    "subheadline": "資産の追跡、減価償却、管理を簡単に。ASEAN企業向けに設計。",
+    "feature_track": "資産追跡",
+    "feature_depreciation": "自動償却",
+    "feature_multilang": "多言語対応",
+    "get_started": "始める",
+    "sign_in": "ログイン",
+    "footer": "FixedAssets - ASEAN向け資産管理システム"
+  },
+  "auth": {
+    "sign_in": "ログイン",
+    "sign_up": "新規登録",
+    "logout": "ログアウト",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "confirm_password": "パスワード確認",
+    "name": "名前",
+    "welcome_back": "おかえりなさい",
+    "create_account": "アカウント作成",
+    "no_account": "アカウントをお持ちでない方",
+    "have_account": "既にアカウントをお持ちの方",
+    "password_mismatch": "パスワードが一致しません",
+    "password_too_short": "パスワードは6文字以上必要です"
+  },
+  "admin": {
+    "title": "管理パネル",
+    "accounts": "全アカウント",
+    "login_as": "としてログイン",
+    "no_accounts": "登録されたアカウントがありません",
+    "current_user": "現在のユーザー",
+    "back_to_app": "アプリに戻る"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "total_assets": "総資産数",
+    "total_value": "取得価額合計",
+    "in_use": "使用中",
+    "disposed": "除却済み",
+    "by_category": "カテゴリ別",
+    "net_book_value": "帳簿価額合計",
+    "no_assets": "登録された資産はありません",
+    "get_started": "最初の資産を登録しましょう"
+  },
+  "asset": {
+    "title": "資産一覧",
+    "register": "資産登録",
+    "edit": "資産編集",
+    "detail": "資産詳細",
+    "name": "資産名",
+    "category": "カテゴリ",
+    "acquisition_date": "取得日",
+    "cost": "取得価額",
+    "salvage_value": "残存価額",
+    "useful_life": "耐用年数",
+    "location": "設置場所",
+    "description": "備考",
+    "depreciation_method": "償却方法",
+    "status": "ステータス",
+    "search_placeholder": "資産を検索...",
+    "no_assets": "資産が見つかりません",
+    "confirm_delete": "この資産を削除しますか？",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "accumulated_depreciation": "減価償却累計額",
+    "book_value": "帳簿価額",
+    "registered_date": "登録日"
+  },
+  "category": {
+    "building": "建物",
+    "vehicle": "車両",
+    "machinery": "機械装置",
+    "furniture": "器具備品",
+    "electronics": "電子機器",
+    "software": "ソフトウェア",
+    "other": "その他"
+  },
+  "status": {
+    "in_use": "使用中",
+    "disposed": "除却済み",
+    "transferred": "移管済み",
+    "maintenance": "メンテナンス中"
+  },
+  "depreciation": {
+    "straight_line": "定額法",
+    "declining_balance": "定率法",
+    "schedule": "償却スケジュール",
+    "year": "年度",
+    "opening_value": "期首帳簿価額",
+    "expense": "償却費",
+    "closing_value": "期末帳簿価額"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "data_management": "データ管理",
+    "export_data": "データエクスポート",
+    "import_data": "データインポート",
+    "clear_data": "全データ削除",
+    "clear_confirm": "全データが削除されます。よろしいですか？",
+    "version": "バージョン"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "retry": "再試行",
+    "currency": "JPY"
+  }
+}

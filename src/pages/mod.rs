@@ -1,0 +1,9 @@
+pub mod dashboard;
+pub mod asset_list;
+pub mod asset_register;
+pub mod asset_detail;
+pub mod settings;
+pub mod landing;
+pub mod login;
+pub mod signup;
+pub mod admin;
