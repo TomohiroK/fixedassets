@@ -10,6 +10,17 @@ ASEAN向け固定資産管理システム。モバイルファースト設計。
 - **Trunk** (build tool)
 - **Vercel** (deployment)
 
+## Access
+
+Production URL: https://fixedassets.vercel.app
+
+Basic認証:
+
+| | |
+|---|---|
+| **ID** | fx123 |
+| **Password** | xckqg |
+
 ## Demo
 
 This application is currently in **demo mode**. On first launch, the following demo accounts are automatically created:
@@ -56,70 +67,28 @@ Output is generated in the `dist/` directory. The release profile applies LTO an
 
 ## Deploy to Vercel
 
-### Option 1: Vercel CLI
+Deploy script handles Trunk build, Basic Auth middleware setup, and Vercel deployment:
 
 ```bash
-# Install Vercel CLI
+# Install Vercel CLI (if not installed)
 npm i -g vercel
 
-# Build locally first
-trunk build --release
+# Login and link project
+vercel login
+vercel link
 
-# Deploy the dist directory
-vercel --prod
+# Deploy (build + auth middleware + deploy)
+./scripts/deploy.sh
 ```
 
-### Option 2: GitHub Integration
+The deploy script (`scripts/deploy.sh`) does:
+1. `trunk build --release` — WASM production build
+2. Prepares Vercel Build Output API structure with Edge Middleware (Basic Auth)
+3. `vercel deploy --prebuilt --prod` — deploys to production
 
-1. Push this repository to GitHub
-2. Import the project on [vercel.com/new](https://vercel.com/new)
-3. Configure build settings:
-   - **Build Command**: `trunk build --release`
-   - **Output Directory**: `dist`
-   - **Install Command**: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && . $HOME/.cargo/env && rustup target add wasm32-unknown-unknown && cargo install trunk`
-4. Deploy
+### Basic Auth
 
-> **Note**: Vercel's default build environment does not include Rust. The install command above sets up the full Rust toolchain during build. Build times will be longer on the first deploy (~3-5 min) but are cached afterward.
-
-### Vercel Configuration
-
-`vercel.json` is pre-configured with:
-- **SPA rewrites**: All routes redirect to `index.html` for client-side routing
-- **WASM headers**: Correct `Content-Type: application/wasm` with immutable cache
-
-### Option 3: GitHub Actions + Vercel
-
-For faster CI builds, create `.github/workflows/deploy.yml`:
-
-```yaml
-name: Deploy to Vercel
-on:
-  push:
-    branches: [main]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - name: Install Trunk
-        run: cargo install trunk
-      - name: Build
-        run: trunk build --release
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./dist
-          vercel-args: --prod
-```
-
-Required secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (obtain from Vercel dashboard).
+Basic認証は Edge Middleware (`scripts/deploy.sh` 内で生成) で実装。認証情報を変更する場合はスクリプト内の `user` / `pass` を編集して再デプロイ。
 
 ## Project Structure
 

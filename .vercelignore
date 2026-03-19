@@ -1,0 +1,12 @@
+target/
+src/
+locales/
+public/
+.claude/
+.git/
+Cargo.toml
+Cargo.lock
+Trunk.toml
+input.css
+tailwind.config.js
+README.md
