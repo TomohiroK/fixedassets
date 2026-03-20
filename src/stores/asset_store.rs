@@ -255,3 +255,235 @@ pub async fn import_assets(json: &str) -> Result<usize, String> {
     }
     Ok(count)
 }
+
+/// Import assets from CSV text
+pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
+    use rust_decimal::Decimal;
+    use std::str::FromStr;
+
+    let mut lines = csv_text.lines();
+
+    // Skip header
+    let header = lines.next().ok_or("Empty CSV file")?;
+    // Validate header has expected columns
+    let cols: Vec<&str> = header.split(',').collect();
+    if cols.len() < 10 {
+        return Err(format!("CSV must have at least 10 columns. Found {} columns. Check the template format.", cols.len()));
+    }
+
+    let mut count = 0;
+    for (line_num, line) in lines.enumerate() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        let fields = parse_csv_line(line);
+        if fields.len() < 10 {
+            return Err(format!("Line {}: Expected at least 10 fields, found {}.", line_num + 2, fields.len()));
+        }
+
+        let asset_number = fields.get(0).unwrap_or(&String::new()).clone();
+        let name = fields.get(1).unwrap_or(&String::new()).clone();
+        if name.is_empty() {
+            return Err(format!("Line {}: Asset name is required.", line_num + 2));
+        }
+
+        let category = parse_category(fields.get(2).map(|s| s.as_str()).unwrap_or("Other"));
+        let acquisition_date = fields.get(3).unwrap_or(&String::new()).clone();
+        if acquisition_date.is_empty() {
+            return Err(format!("Line {}: Acquisition date is required (YYYY-MM-DD).", line_num + 2));
+        }
+
+        let cost = Decimal::from_str(fields.get(4).unwrap_or(&"0".to_string()))
+            .map_err(|_| format!("Line {}: Invalid cost value.", line_num + 2))?;
+        let salvage_value = Decimal::from_str(fields.get(5).unwrap_or(&"0".to_string()))
+            .map_err(|_| format!("Line {}: Invalid salvage value.", line_num + 2))?;
+        let useful_life: u32 = fields.get(6).unwrap_or(&"5".to_string()).parse()
+            .map_err(|_| format!("Line {}: Invalid useful life.", line_num + 2))?;
+        let depreciation_method = parse_method(fields.get(7).map(|s| s.as_str()).unwrap_or("SL"));
+        let location = fields.get(8).unwrap_or(&String::new()).clone();
+        let description = fields.get(9).unwrap_or(&String::new()).clone();
+
+        let prior_years: u32 = fields.get(10).and_then(|s| s.parse().ok()).unwrap_or(0);
+        let prior_months: u32 = fields.get(11).and_then(|s| s.parse().ok()).unwrap_or(0);
+        let status = parse_status(fields.get(12).map(|s| s.as_str()).unwrap_or("InUse"));
+        let tags: Vec<String> = fields.get(13)
+            .map(|s| s.split(';').map(|t| t.trim().to_string()).filter(|t| !t.is_empty()).collect())
+            .unwrap_or_default();
+
+        let mut asset = Asset::new(
+            asset_number,
+            name,
+            category,
+            acquisition_date,
+            cost,
+            salvage_value,
+            useful_life,
+            depreciation_method,
+            prior_years,
+            prior_months,
+            location,
+            description,
+            tags,
+        );
+        asset.status = status;
+
+        save_asset(&asset).await?;
+        count += 1;
+    }
+
+    Ok(count)
+}
+
+/// Parse a CSV line handling quoted fields with commas
+fn parse_csv_line(line: &str) -> Vec<String> {
+    let mut fields = Vec::new();
+    let mut current = String::new();
+    let mut in_quotes = false;
+
+    for ch in line.chars() {
+        if ch == '"' {
+            in_quotes = !in_quotes;
+        } else if ch == ',' && !in_quotes {
+            fields.push(current.trim().to_string());
+            current = String::new();
+        } else {
+            current.push(ch);
+        }
+    }
+    fields.push(current.trim().to_string());
+    fields
+}
+
+fn parse_category(s: &str) -> Category {
+    use crate::models::asset::Category;
+    match s.trim() {
+        "Land" | "土地" => Category::Land,
+        "Building" | "建物" => Category::Building,
+        "BuildingEquipment" | "建物付属設備" => Category::BuildingEquipment,
+        "Structures" | "構築物" => Category::Structures,
+        "Machinery" | "機械装置" => Category::Machinery,
+        "ToolsFixtures" | "工具器具備品" => Category::ToolsFixtures,
+        "Vehicles" | "車両運搬具" => Category::Vehicles,
+        "LeasedAssets" | "リース資産" => Category::LeasedAssets,
+        "ConstructionInProgress" | "建設仮勘定" => Category::ConstructionInProgress,
+        "Patents" | "特許権" => Category::Patents,
+        "Trademarks" | "商標権" => Category::Trademarks,
+        "LeaseholdRights" | "借地権" => Category::LeaseholdRights,
+        "Software" | "ソフトウエア" => Category::Software,
+        "FacilityRights" | "施設利用権" => Category::FacilityRights,
+        "Goodwill" | "のれん" => Category::Goodwill,
+        _ => Category::Other,
+    }
+}
+
+fn parse_method(s: &str) -> DepreciationMethod {
+    use crate::models::asset::DepreciationMethod;
+    match s.trim() {
+        "DB" | "DecliningBalance" | "定率法" => DepreciationMethod::DecliningBalance,
+        _ => DepreciationMethod::StraightLine,
+    }
+}
+
+fn parse_status(s: &str) -> AssetStatus {
+    use crate::models::asset::AssetStatus;
+    match s.trim() {
+        "Disposed" | "除却済み" => AssetStatus::Disposed,
+        "Transferred" | "移管済み" => AssetStatus::Transferred,
+        "Maintenance" | "メンテナンス中" => AssetStatus::Maintenance,
+        _ => AssetStatus::InUse,
+    }
+}
+
+/// Generate CSV template string
+pub fn csv_template() -> String {
+    "asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags\n\
+     FA-001,Office Desk,ToolsFixtures,2024-04-01,50000,1,8,SL,Tokyo Office,Executive desk,0,0,InUse,office;furniture\n\
+     FA-002,Delivery Van,Vehicles,2023-10-15,2500000,1,6,DB,Warehouse,Toyota HiAce,1,3,InUse,vehicle;delivery\n\
+     FA-003,Accounting Software,Software,2024-01-01,300000,0,5,SL,,Cloud license,0,0,InUse,software;accounting\n".to_string()
+}
+
+/// Generate JSON template string
+pub fn json_template() -> String {
+    use crate::models::asset::{Category, DepreciationMethod};
+    let samples = vec![
+        Asset::new(
+            "FA-001".to_string(),
+            "Office Desk".to_string(),
+            Category::ToolsFixtures,
+            "2024-04-01".to_string(),
+            Decimal::from_str("50000").unwrap(),
+            Decimal::ONE,
+            8,
+            DepreciationMethod::StraightLine,
+            0, 0,
+            "Tokyo Office".to_string(),
+            "Executive desk".to_string(),
+            vec!["office".to_string(), "furniture".to_string()],
+        ),
+        Asset::new(
+            "FA-002".to_string(),
+            "Delivery Van".to_string(),
+            Category::Vehicles,
+            "2023-10-15".to_string(),
+            Decimal::from_str("2500000").unwrap(),
+            Decimal::ONE,
+            6,
+            DepreciationMethod::DecliningBalance,
+            1, 3,
+            "Warehouse".to_string(),
+            "Toyota HiAce".to_string(),
+            vec!["vehicle".to_string(), "delivery".to_string()],
+        ),
+    ];
+    serde_json::to_string_pretty(&samples).unwrap_or_default()
+}
+
+use rust_decimal::Decimal;
+use std::str::FromStr;
+use crate::models::asset::{Category, DepreciationMethod, AssetStatus};
+
+/// Export all assets as CSV
+pub async fn export_all_assets_csv() -> Result<String, String> {
+    let assets = get_all_assets().await?;
+    let mut csv = String::from("asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags\n");
+
+    for a in &assets {
+        let category = format!("{:?}", a.category);
+        let method = match a.depreciation_method {
+            DepreciationMethod::StraightLine => "SL",
+            DepreciationMethod::DecliningBalance => "DB",
+        };
+        let status = format!("{:?}", a.status);
+        let tags = a.tags.join(";");
+
+        csv.push_str(&format!(
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+            csv_escape(&a.asset_number),
+            csv_escape(&a.name),
+            category,
+            a.acquisition_date,
+            a.cost,
+            a.salvage_value,
+            a.useful_life,
+            method,
+            csv_escape(&a.location),
+            csv_escape(&a.description),
+            a.prior_depreciation_years,
+            a.prior_depreciation_months,
+            status,
+            csv_escape(&tags),
+        ));
+    }
+
+    Ok(csv)
+}
+
+fn csv_escape(s: &str) -> String {
+    if s.contains(',') || s.contains('"') || s.contains('\n') {
+        format!("\"{}\"", s.replace('"', "\"\""))
+    } else {
+        s.to_string()
+    }
+}

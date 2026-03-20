@@ -180,6 +180,50 @@ impl Category {
             Category::Other => 15,
         }
     }
+
+    /// Emoji icon for category display
+    pub fn emoji(&self) -> &str {
+        match self {
+            Category::Land => "🏞️",
+            Category::Building => "🏢",
+            Category::BuildingEquipment => "🔧",
+            Category::Structures => "🏗️",
+            Category::Machinery => "⚙️",
+            Category::ToolsFixtures => "🔨",
+            Category::Vehicles => "🚗",
+            Category::LeasedAssets => "📋",
+            Category::ConstructionInProgress => "🚧",
+            Category::Patents => "📜",
+            Category::Trademarks => "™️",
+            Category::LeaseholdRights => "🔑",
+            Category::Software => "💻",
+            Category::FacilityRights => "🏭",
+            Category::Goodwill => "🤝",
+            Category::Other => "📦",
+        }
+    }
+
+    /// Gradient color pair for category card background
+    pub fn gradient_class(&self) -> &str {
+        match self {
+            Category::Land => "from-emerald-400 to-emerald-600",
+            Category::Building => "from-blue-400 to-blue-600",
+            Category::BuildingEquipment => "from-cyan-400 to-cyan-600",
+            Category::Structures => "from-slate-400 to-slate-600",
+            Category::Machinery => "from-orange-400 to-orange-600",
+            Category::ToolsFixtures => "from-amber-400 to-amber-600",
+            Category::Vehicles => "from-red-400 to-red-600",
+            Category::LeasedAssets => "from-violet-400 to-violet-600",
+            Category::ConstructionInProgress => "from-yellow-400 to-yellow-600",
+            Category::Patents => "from-indigo-400 to-indigo-600",
+            Category::Trademarks => "from-pink-400 to-pink-600",
+            Category::LeaseholdRights => "from-teal-400 to-teal-600",
+            Category::Software => "from-purple-400 to-purple-600",
+            Category::FacilityRights => "from-rose-400 to-rose-600",
+            Category::Goodwill => "from-sky-400 to-sky-600",
+            Category::Other => "from-gray-400 to-gray-600",
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]

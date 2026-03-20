@@ -172,37 +172,176 @@ pub fn SettingsPage() -> impl IntoView {
                 </div>
             </div>
 
+            // Import Template
+            <div class="card mb-4">
+                <h3 class="font-semibold text-gray-900 mb-3">{move || i18n.t("settings.import_template")}</h3>
+                <p class="text-xs text-gray-500 mb-3">{move || i18n.t("settings.template_hint")}</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button
+                        class="btn-secondary text-sm py-2.5"
+                        on:click=move |_| {
+                            let csv = asset_store::csv_template();
+                            download_file(&csv, "fixedassets_template.csv", "text/csv");
+                            status_message.set(Some(i18n.t("settings.template_downloaded")));
+                        }
+                    >
+                        <div class="flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            "CSV"
+                        </div>
+                    </button>
+                    <button
+                        class="btn-secondary text-sm py-2.5"
+                        on:click=move |_| {
+                            let json = asset_store::json_template();
+                            download_file(&json, "fixedassets_template.json", "application/json");
+                            status_message.set(Some(i18n.t("settings.template_downloaded")));
+                        }
+                    >
+                        <div class="flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            "JSON"
+                        </div>
+                    </button>
+                </div>
+
+                // Format reference
+                <details class="mt-3">
+                    <summary class="text-xs text-blue-600 cursor-pointer font-medium">
+                        {move || i18n.t("settings.format_reference")}
+                    </summary>
+                    <div class="mt-2 p-3 bg-gray-50 rounded-lg text-[11px] text-gray-600 space-y-2 overflow-x-auto">
+                        <p class="font-semibold text-gray-700">{move || i18n.t("settings.csv_columns")}</p>
+                        <table class="w-full text-left">
+                            <tbody>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"asset_number"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_asset_number")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"name"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_name")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"category"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_category")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"acquisition_date"</td>
+                                    <td class="py-1">"YYYY-MM-DD"</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"cost"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_cost")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"salvage_value"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_salvage")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"useful_life"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_life")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"depreciation_method"</td>
+                                    <td class="py-1">"SL / DB"</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"location"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_location")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"description"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_description")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"prior_years"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_prior_years")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"prior_months"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_prior_months")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"status"</td>
+                                    <td class="py-1">"InUse / Disposed / Transferred / Maintenance"</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1 font-mono text-blue-700">"tags"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_tags")}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <p class="font-semibold text-gray-700 pt-2">{move || i18n.t("settings.category_values")}</p>
+                        <p class="font-mono leading-relaxed">
+                            "Land, Building, BuildingEquipment, Structures, Machinery, ToolsFixtures, Vehicles, LeasedAssets, ConstructionInProgress, Patents, Trademarks, LeaseholdRights, Software, FacilityRights, Goodwill, Other"
+                        </p>
+                        <p class="text-gray-500 italic">{move || i18n.t("settings.category_ja_hint")}</p>
+                    </div>
+                </details>
+            </div>
+
             // Data Management
             <div class="card mb-4">
                 <h3 class="font-semibold text-gray-900 mb-3">{move || i18n.t("settings.data_management")}</h3>
                 <div class="space-y-3">
                     // Export
-                    <button
-                        class="btn-secondary"
-                        on:click=move |_| {
-                            leptos::task::spawn_local(async move {
-                                match asset_store::export_all_assets().await {
-                                    Ok(json) => {
-                                        download_json(&json, "fixedassets_export.json");
-                                        status_message.set(Some("Export completed".to_string()));
+                    <div class="grid grid-cols-2 gap-2">
+                        <button
+                            class="btn-secondary text-sm"
+                            on:click=move |_| {
+                                leptos::task::spawn_local(async move {
+                                    match asset_store::export_all_assets().await {
+                                        Ok(json) => {
+                                            download_file(&json, "fixedassets_export.json", "application/json");
+                                            status_message.set(Some("Export (JSON) completed".to_string()));
+                                        }
+                                        Err(e) => {
+                                            status_message.set(Some(format!("Export failed: {}", e)));
+                                        }
                                     }
-                                    Err(e) => {
-                                        status_message.set(Some(format!("Export failed: {}", e)));
+                                });
+                            }
+                        >
+                            {move || format!("{} (JSON)", i18n.t("settings.export_data"))}
+                        </button>
+                        <button
+                            class="btn-secondary text-sm"
+                            on:click=move |_| {
+                                leptos::task::spawn_local(async move {
+                                    match asset_store::export_all_assets_csv().await {
+                                        Ok(csv) => {
+                                            download_file(&csv, "fixedassets_export.csv", "text/csv");
+                                            status_message.set(Some("Export (CSV) completed".to_string()));
+                                        }
+                                        Err(e) => {
+                                            status_message.set(Some(format!("Export failed: {}", e)));
+                                        }
                                     }
-                                }
-                            });
-                        }
-                    >
-                        {move || i18n.t("settings.export_data")}
-                    </button>
+                                });
+                            }
+                        >
+                            {move || format!("{} (CSV)", i18n.t("settings.export_data"))}
+                        </button>
+                    </div>
 
                     // Import
                     <div>
-                        <label class="btn-secondary cursor-pointer block">
-                            {move || i18n.t("settings.import_data")}
+                        <label class="btn-secondary cursor-pointer block text-sm">
+                            <div class="flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                                </svg>
+                                {move || i18n.t("settings.import_data")} " (JSON / CSV)"
+                            </div>
                             <input
                                 type="file"
-                                accept=".json"
+                                accept=".json,.csv"
                                 class="hidden"
                                 on:change=move |ev| {
                                     use wasm_bindgen::JsCast;
@@ -210,13 +349,21 @@ pub fn SettingsPage() -> impl IntoView {
                                     let input: web_sys::HtmlInputElement = target.unchecked_into();
                                     if let Some(files) = input.files() {
                                         if let Some(file) = files.get(0) {
+                                            let filename = file.name();
+                                            let is_csv = filename.ends_with(".csv");
                                             let reader = web_sys::FileReader::new().unwrap();
                                             let reader_clone = reader.clone();
                                             let onload = wasm_bindgen::closure::Closure::wrap(Box::new(move |_: web_sys::Event| {
                                                 if let Ok(result) = reader_clone.result() {
                                                     if let Some(text) = result.as_string() {
+                                                        let is_csv = is_csv;
                                                         leptos::task::spawn_local(async move {
-                                                            match asset_store::import_assets(&text).await {
+                                                            let result = if is_csv {
+                                                                asset_store::import_assets_csv(&text).await
+                                                            } else {
+                                                                asset_store::import_assets(&text).await
+                                                            };
+                                                            match result {
                                                                 Ok(count) => {
                                                                     status_message.set(Some(format!("Imported {} assets", count)));
                                                                 }
@@ -278,16 +425,23 @@ pub fn SettingsPage() -> impl IntoView {
     }
 }
 
-fn download_json(json: &str, filename: &str) {
+fn download_file(content: &str, filename: &str, mime_type: &str) {
     use wasm_bindgen::JsCast;
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
 
+    // Add BOM for CSV to support Excel opening with UTF-8
+    let content_with_bom = if mime_type.contains("csv") {
+        format!("\u{FEFF}{}", content)
+    } else {
+        content.to_string()
+    };
+
     let blob_parts = js_sys::Array::new();
-    blob_parts.push(&wasm_bindgen::JsValue::from_str(json));
+    blob_parts.push(&wasm_bindgen::JsValue::from_str(&content_with_bom));
 
     let options = web_sys::BlobPropertyBag::new();
-    options.set_type("application/json");
+    options.set_type(mime_type);
 
     let blob = web_sys::Blob::new_with_str_sequence_and_options(&blob_parts, &options).unwrap();
     let url = web_sys::Url::create_object_url_with_blob(&blob).unwrap();
