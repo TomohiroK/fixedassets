@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 use crate::i18n::use_i18n;
-use crate::auth::{use_auth, get_all_stored_users, toggle_user_paid};
+use crate::auth::{use_auth, get_all_stored_users, toggle_user_paid, verify_admin_password};
 
 const ADMIN_EMAIL: &str = "admin@example.com";
 
@@ -42,15 +42,12 @@ pub fn AdminPage() -> impl IntoView {
                                 <form on:submit=move |ev| {
                                     ev.prevent_default();
                                     let pw = password_input.get();
-                                    let users = get_all_stored_users();
-                                    if let Some(admin) = users.iter().find(|u| u.email == ADMIN_EMAIL) {
-                                        if admin.password == pw {
-                                            admin_authenticated.set(true);
-                                            error_msg.set(None);
-                                            return;
-                                        }
+                                    if verify_admin_password(ADMIN_EMAIL, &pw) {
+                                        admin_authenticated.set(true);
+                                        error_msg.set(None);
+                                    } else {
+                                        error_msg.set(Some(i18n.t("admin.wrong_password")));
                                     }
-                                    error_msg.set(Some(i18n.t("admin.wrong_password")));
                                 }>
                                     <input
                                         type="password"

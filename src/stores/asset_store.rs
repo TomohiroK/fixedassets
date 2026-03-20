@@ -246,9 +246,29 @@ pub async fn export_all_assets() -> Result<String, String> {
     serde_json::to_string_pretty(&assets).map_err(|e| format!("Serialize error: {}", e))
 }
 
+/// Max import file size (5 MB)
+const MAX_IMPORT_SIZE: usize = 5 * 1024 * 1024;
+/// Max assets per import
+const MAX_IMPORT_ASSETS: usize = 10000;
+
 pub async fn import_assets(json: &str) -> Result<usize, String> {
+    // Size check
+    if json.len() > MAX_IMPORT_SIZE {
+        return Err(format!("File too large. Maximum {} MB.", MAX_IMPORT_SIZE / 1024 / 1024));
+    }
+
     let assets: Vec<Asset> = serde_json::from_str(json)
         .map_err(|e| format!("Parse error: {}", e))?;
+
+    if assets.len() > MAX_IMPORT_ASSETS {
+        return Err(format!("Too many assets. Maximum {} per import.", MAX_IMPORT_ASSETS));
+    }
+
+    // Validate each asset
+    for (i, asset) in assets.iter().enumerate() {
+        validate_asset(asset, i + 1)?;
+    }
+
     let count = assets.len();
     for asset in &assets {
         save_asset(asset).await?;
@@ -256,8 +276,61 @@ pub async fn import_assets(json: &str) -> Result<usize, String> {
     Ok(count)
 }
 
+/// Validate asset data integrity
+fn validate_asset(asset: &Asset, line: usize) -> Result<(), String> {
+    if asset.name.trim().is_empty() {
+        return Err(format!("Item {}: Asset name is required.", line));
+    }
+    if asset.name.len() > 500 {
+        return Err(format!("Item {}: Asset name too long (max 500 chars).", line));
+    }
+    if asset.cost < Decimal::ZERO {
+        return Err(format!("Item {}: Cost cannot be negative.", line));
+    }
+    if asset.cost > Decimal::from_str("99999999999999").unwrap_or(Decimal::MAX) {
+        return Err(format!("Item {}: Cost value too large.", line));
+    }
+    if asset.salvage_value < Decimal::ZERO {
+        return Err(format!("Item {}: Salvage value cannot be negative.", line));
+    }
+    if asset.useful_life == 0 || asset.useful_life > 100 {
+        return Err(format!("Item {}: Useful life must be 1-100 years.", line));
+    }
+    if asset.prior_depreciation_months > 11 {
+        return Err(format!("Item {}: Prior months must be 0-11.", line));
+    }
+    // Date format validation
+    if !asset.acquisition_date.is_empty() {
+        if chrono::NaiveDate::parse_from_str(&asset.acquisition_date, "%Y-%m-%d").is_err() {
+            return Err(format!("Item {}: Invalid date format (use YYYY-MM-DD).", line));
+        }
+    }
+    // Description length limit
+    if asset.description.len() > 5000 {
+        return Err(format!("Item {}: Description too long (max 5000 chars).", line));
+    }
+    if asset.location.len() > 500 {
+        return Err(format!("Item {}: Location too long (max 500 chars).", line));
+    }
+    // Tag validation
+    if asset.tags.len() > 50 {
+        return Err(format!("Item {}: Too many tags (max 50).", line));
+    }
+    for tag in &asset.tags {
+        if tag.len() > 100 {
+            return Err(format!("Item {}: Tag too long (max 100 chars).", line));
+        }
+    }
+    Ok(())
+}
+
 /// Import assets from CSV text
 pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
+    // Size check
+    if csv_text.len() > MAX_IMPORT_SIZE {
+        return Err(format!("File too large. Maximum {} MB.", MAX_IMPORT_SIZE / 1024 / 1024));
+    }
+
     use rust_decimal::Decimal;
     use std::str::FromStr;
 
@@ -297,10 +370,19 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
 
         let cost = Decimal::from_str(fields.get(4).unwrap_or(&"0".to_string()))
             .map_err(|_| format!("Line {}: Invalid cost value.", line_num + 2))?;
+        if cost < Decimal::ZERO {
+            return Err(format!("Line {}: Cost cannot be negative.", line_num + 2));
+        }
         let salvage_value = Decimal::from_str(fields.get(5).unwrap_or(&"0".to_string()))
             .map_err(|_| format!("Line {}: Invalid salvage value.", line_num + 2))?;
+        if salvage_value < Decimal::ZERO {
+            return Err(format!("Line {}: Salvage value cannot be negative.", line_num + 2));
+        }
         let useful_life: u32 = fields.get(6).unwrap_or(&"5".to_string()).parse()
             .map_err(|_| format!("Line {}: Invalid useful life.", line_num + 2))?;
+        if useful_life == 0 || useful_life > 100 {
+            return Err(format!("Line {}: Useful life must be 1-100 years.", line_num + 2));
+        }
         let depreciation_method = parse_method(fields.get(7).map(|s| s.as_str()).unwrap_or("SL"));
         let location = fields.get(8).unwrap_or(&String::new()).clone();
         let description = fields.get(9).unwrap_or(&String::new()).clone();
@@ -331,6 +413,9 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
 
         save_asset(&asset).await?;
         count += 1;
+        if count > MAX_IMPORT_ASSETS {
+            return Err(format!("Too many rows. Maximum {} assets per import.", MAX_IMPORT_ASSETS));
+        }
     }
 
     Ok(count)

@@ -25,17 +25,30 @@ cat > .vercel/output/config.json << 'EOF'
 }
 EOF
 
-# Create Edge Middleware for Basic Auth
-cat > .vercel/output/functions/_middleware.func/index.js << 'EOF'
+# Create Edge Middleware for Basic Auth using ENV VARS
+# Set BASIC_AUTH_USER and BASIC_AUTH_PASS in Vercel Environment Variables
+cat > .vercel/output/functions/_middleware.func/index.js << 'ENDOFJS'
 export default function middleware(request) {
+  const expectedUser = process.env.BASIC_AUTH_USER;
+  const expectedPass = process.env.BASIC_AUTH_PASS;
+
+  // If no env vars set, skip auth (dev mode)
+  if (!expectedUser || !expectedPass) {
+    return;
+  }
+
   const auth = request.headers.get("authorization");
   if (auth) {
     const [scheme, encoded] = auth.split(" ");
     if (scheme === "Basic") {
-      const decoded = atob(encoded);
-      const [user, pass] = decoded.split(":");
-      if (user === "fx123" && pass === "xckqg") {
-        return;
+      try {
+        const decoded = atob(encoded);
+        const [user, pass] = decoded.split(":");
+        if (user === expectedUser && pass === expectedPass) {
+          return;
+        }
+      } catch (e) {
+        // Invalid base64
       }
     }
   }
@@ -44,7 +57,7 @@ export default function middleware(request) {
     headers: { "WWW-Authenticate": 'Basic realm="FixedAssets"' },
   });
 }
-EOF
+ENDOFJS
 
 cat > .vercel/output/functions/_middleware.func/.vc-config.json << 'EOF'
 {

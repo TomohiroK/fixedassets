@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 use crate::i18n::use_i18n;
-use crate::auth::use_auth;
+use crate::auth::{use_auth, validate_password_strength};
 
 #[component]
 pub fn SignupPage() -> impl IntoView {
@@ -13,6 +13,7 @@ pub fn SignupPage() -> impl IntoView {
     let email = RwSignal::new(String::new());
     let password = RwSignal::new(String::new());
     let confirm_password = RwSignal::new(String::new());
+    let agreed_tos = RwSignal::new(false);
     let error = RwSignal::new(Option::<String>::None);
 
     view! {
@@ -58,13 +59,23 @@ pub fn SignupPage() -> impl IntoView {
                             ev.prevent_default();
                             let nav = navigate.clone();
 
+                            if !agreed_tos.get() {
+                                error.set(Some(i18n.t("auth.agree_tos_required")));
+                                return;
+                            }
+
                             if password.get() != confirm_password.get() {
                                 error.set(Some(i18n.t("auth.password_mismatch")));
                                 return;
                             }
 
-                            if password.get().len() < 6 {
-                                error.set(Some(i18n.t("auth.password_too_short")));
+                            if let Err(pw_err) = validate_password_strength(&password.get()) {
+                                let msg = match pw_err.as_str() {
+                                    "password_too_short" => i18n.t("auth.password_too_short"),
+                                    "password_weak" => i18n.t("auth.password_weak"),
+                                    _ => pw_err,
+                                };
+                                error.set(Some(msg));
                                 return;
                             }
 
@@ -135,10 +146,24 @@ pub fn SignupPage() -> impl IntoView {
                         <a href="/login" class="text-blue-600 font-medium">{move || i18n.t("auth.sign_in")}</a>
                     </p>
 
-                    <p class="mt-4 text-center text-xs text-gray-400">
-                        "By signing up, you agree to our "
-                        <a href="/terms" class="text-blue-500 underline">"Terms of Service"</a>
-                    </p>
+                    // Terms checkbox (above submit or below form)
+                    <div class="mt-4 flex items-start gap-2">
+                        <input
+                            type="checkbox"
+                            id="tos-checkbox"
+                            class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded"
+                            prop:checked=move || agreed_tos.get()
+                            on:change=move |ev| {
+                                use wasm_bindgen::JsCast;
+                                let target: web_sys::HtmlInputElement = ev.target().unwrap().unchecked_into();
+                                agreed_tos.set(target.checked());
+                            }
+                        />
+                        <label for="tos-checkbox" class="text-xs text-gray-500">
+                            {move || i18n.t("auth.agree_tos_prefix")} " "
+                            <a href="/terms" target="_blank" class="text-blue-500 underline">"Terms of Service"</a>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
