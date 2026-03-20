@@ -13,10 +13,12 @@ use crate::pages::{
     asset_detail::AssetDetailPage,
     settings::SettingsPage,
     landing::LandingPage,
+    country_landing::{CountryLandingPage, GeoRedirectLanding},
     login::LoginPage,
     signup::SignupPage,
     admin::AdminPage,
     setup::SetupPage,
+    terms::TermsPage,
 };
 
 #[component]
@@ -25,11 +27,26 @@ pub fn AppRouter() -> impl IntoView {
         <Router>
             <Routes fallback=|| view! { <div class="page-container">"404 - Page not found"</div> }>
                 // Public routes - no setup required
-                <Route path=path!("/welcome") view=LandingPage />
+                <Route path=path!("/welcome") view=GeoRedirectLanding />
                 <Route path=path!("/login") view=LoginPage />
                 <Route path=path!("/signup") view=SignupPage />
                 <Route path=path!("/admin") view=AdminPage />
+                <Route path=path!("/terms") view=TermsPage />
                 <Route path=path!("/setup") view=SetupGuardedSetup />
+
+                // Country-specific SEO landing pages
+                <Route path=path!("/japan") view=CountryJapan />
+                <Route path=path!("/singapore") view=CountrySingapore />
+                <Route path=path!("/malaysia") view=CountryMalaysia />
+                <Route path=path!("/thailand") view=CountryThailand />
+                <Route path=path!("/indonesia") view=CountryIndonesia />
+                <Route path=path!("/philippines") view=CountryPhilippines />
+                <Route path=path!("/vietnam") view=CountryVietnam />
+                <Route path=path!("/myanmar") view=CountryMyanmar />
+                <Route path=path!("/cambodia") view=CountryCambodia />
+                <Route path=path!("/laos") view=CountryLaos />
+                <Route path=path!("/brunei") view=CountryBrunei />
+
                 // Auth + Setup guarded routes
                 <Route path=path!("/") view=GuardedDashboard />
                 <Route path=path!("/assets") view=GuardedAssetList />
@@ -40,6 +57,19 @@ pub fn AppRouter() -> impl IntoView {
         </Router>
     }
 }
+
+// Country landing page wrappers (each passes the slug)
+#[component] fn CountryJapan() -> impl IntoView { view! { <CountryLandingPage country_slug="japan".to_string() /> } }
+#[component] fn CountrySingapore() -> impl IntoView { view! { <CountryLandingPage country_slug="singapore".to_string() /> } }
+#[component] fn CountryMalaysia() -> impl IntoView { view! { <CountryLandingPage country_slug="malaysia".to_string() /> } }
+#[component] fn CountryThailand() -> impl IntoView { view! { <CountryLandingPage country_slug="thailand".to_string() /> } }
+#[component] fn CountryIndonesia() -> impl IntoView { view! { <CountryLandingPage country_slug="indonesia".to_string() /> } }
+#[component] fn CountryPhilippines() -> impl IntoView { view! { <CountryLandingPage country_slug="philippines".to_string() /> } }
+#[component] fn CountryVietnam() -> impl IntoView { view! { <CountryLandingPage country_slug="vietnam".to_string() /> } }
+#[component] fn CountryMyanmar() -> impl IntoView { view! { <CountryLandingPage country_slug="myanmar".to_string() /> } }
+#[component] fn CountryCambodia() -> impl IntoView { view! { <CountryLandingPage country_slug="cambodia".to_string() /> } }
+#[component] fn CountryLaos() -> impl IntoView { view! { <CountryLandingPage country_slug="laos".to_string() /> } }
+#[component] fn CountryBrunei() -> impl IntoView { view! { <CountryLandingPage country_slug="brunei".to_string() /> } }
 
 fn needs_setup() -> bool {
     CompanySetup::load().is_none()

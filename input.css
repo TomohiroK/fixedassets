@@ -74,4 +74,12 @@
     .badge-blue {
         @apply badge bg-blue-100 text-blue-800;
     }
+
+    .terms-text {
+        @apply text-sm text-gray-600 leading-relaxed;
+    }
+
+    .terms-list {
+        @apply space-y-2 text-sm text-gray-600 leading-relaxed list-disc pl-5;
+    }
 }

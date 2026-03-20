@@ -134,6 +134,11 @@ pub fn SignupPage() -> impl IntoView {
                         {move || i18n.t("auth.have_account")} " "
                         <a href="/login" class="text-blue-600 font-medium">{move || i18n.t("auth.sign_in")}</a>
                     </p>
+
+                    <p class="mt-4 text-center text-xs text-gray-400">
+                        "By signing up, you agree to our "
+                        <a href="/terms" class="text-blue-500 underline">"Terms of Service"</a>
+                    </p>
                 </div>
             </div>
         </div>
