@@ -5,12 +5,12 @@ use wasm_bindgen::JsCast;
 use web_sys::{IdbDatabase, IdbObjectStoreParameters, IdbTransactionMode, IdbRequest, IdbOpenDbRequest};
 use js_sys::Array;
 
-use crate::models::asset::Asset;
+use crate::models::photo::AssetPhoto;
 
 const DB_NAME: &str = "fixedassets_db";
 const DB_VERSION: u32 = 2;
-const STORE_NAME: &str = "assets";
 const PHOTO_STORE: &str = "photos";
+const ASSET_STORE: &str = "assets";
 
 fn has_store(db: &IdbDatabase, name: &str) -> bool {
     let list = db.object_store_names();
@@ -43,19 +43,21 @@ async fn open_db() -> Result<IdbDatabase, String> {
         let request: IdbOpenDbRequest = target.unchecked_into();
         let db: IdbDatabase = request.result().unwrap().unchecked_into();
 
-        if !has_store(&db, STORE_NAME) {
+        if !has_store(&db, ASSET_STORE) {
             let params = IdbObjectStoreParameters::new();
             params.set_key_path(&JsValue::from_str("id"));
             let _store = db
-                .create_object_store_with_optional_parameters(STORE_NAME, &params)
+                .create_object_store_with_optional_parameters(ASSET_STORE, &params)
                 .unwrap();
         }
+
         if !has_store(&db, PHOTO_STORE) {
             let params = IdbObjectStoreParameters::new();
             params.set_key_path(&JsValue::from_str("id"));
             let store = db
                 .create_object_store_with_optional_parameters(PHOTO_STORE, &params)
                 .unwrap();
+            // Index by asset_id for efficient lookups
             let idx_params = web_sys::IdbIndexParameters::new();
             idx_params.set_unique(false);
             let _ = store.create_index_with_str_and_optional_parameters(
@@ -122,16 +124,16 @@ fn idb_request_to_future(request: &IdbRequest) -> futures_channel::oneshot::Rece
     rx
 }
 
-pub async fn save_asset(asset: &Asset) -> Result<(), String> {
+pub async fn save_photo(photo: &AssetPhoto) -> Result<(), String> {
     let db = open_db().await?;
     let transaction = db
-        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readwrite)
+        .transaction_with_str_and_mode(PHOTO_STORE, IdbTransactionMode::Readwrite)
         .map_err(|e| format!("Transaction error: {:?}", e))?;
     let store = transaction
-        .object_store(STORE_NAME)
+        .object_store(PHOTO_STORE)
         .map_err(|e| format!("Store error: {:?}", e))?;
 
-    let json = serde_json::to_string(asset).map_err(|e| format!("Serialize error: {}", e))?;
+    let json = serde_json::to_string(photo).map_err(|e| format!("Serialize error: {}", e))?;
     let js_value = js_sys::JSON::parse(&json).map_err(|e| format!("JSON parse error: {:?}", e))?;
 
     let request = store
@@ -143,75 +145,52 @@ pub async fn save_asset(asset: &Asset) -> Result<(), String> {
     Ok(())
 }
 
-pub async fn get_all_assets() -> Result<Vec<Asset>, String> {
+pub async fn get_photos_for_asset(asset_id: &str) -> Result<Vec<AssetPhoto>, String> {
     let db = open_db().await?;
     let transaction = db
-        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readonly)
+        .transaction_with_str_and_mode(PHOTO_STORE, IdbTransactionMode::Readonly)
         .map_err(|e| format!("Transaction error: {:?}", e))?;
     let store = transaction
-        .object_store(STORE_NAME)
+        .object_store(PHOTO_STORE)
         .map_err(|e| format!("Store error: {:?}", e))?;
 
-    let request = store
-        .get_all()
+    // Use index to query by asset_id
+    let index = store
+        .index("asset_id_idx")
+        .map_err(|e| format!("Index error: {:?}", e))?;
+
+    let request = index
+        .get_all_with_key(&JsValue::from_str(asset_id))
         .map_err(|e| format!("GetAll error: {:?}", e))?;
 
     let rx = idb_request_to_future(&request);
     let result = rx.await.map_err(|_| "Channel error".to_string())??;
 
     let array: Array = result.unchecked_into();
-    let mut assets = Vec::new();
+    let mut photos = Vec::new();
 
     for i in 0..array.length() {
         let item = array.get(i);
         let json = js_sys::JSON::stringify(&item)
             .map_err(|e| format!("Stringify error: {:?}", e))?;
         let json_str: String = json.into();
-        match serde_json::from_str::<Asset>(&json_str) {
-            Ok(asset) => assets.push(asset),
-            Err(e) => log::warn!("Failed to deserialize asset: {}", e),
+        match serde_json::from_str::<AssetPhoto>(&json_str) {
+            Ok(photo) => photos.push(photo),
+            Err(e) => log::warn!("Failed to deserialize photo: {}", e),
         }
     }
 
-    assets.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-    Ok(assets)
+    photos.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    Ok(photos)
 }
 
-pub async fn get_asset(id: &str) -> Result<Option<Asset>, String> {
+pub async fn delete_photo(id: &str) -> Result<(), String> {
     let db = open_db().await?;
     let transaction = db
-        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readonly)
+        .transaction_with_str_and_mode(PHOTO_STORE, IdbTransactionMode::Readwrite)
         .map_err(|e| format!("Transaction error: {:?}", e))?;
     let store = transaction
-        .object_store(STORE_NAME)
-        .map_err(|e| format!("Store error: {:?}", e))?;
-
-    let request = store
-        .get(&JsValue::from_str(id))
-        .map_err(|e| format!("Get error: {:?}", e))?;
-
-    let rx = idb_request_to_future(&request);
-    let result = rx.await.map_err(|_| "Channel error".to_string())??;
-
-    if result.is_undefined() || result.is_null() {
-        return Ok(None);
-    }
-
-    let json = js_sys::JSON::stringify(&result)
-        .map_err(|e| format!("Stringify error: {:?}", e))?;
-    let json_str: String = json.into();
-    let asset: Asset = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Deserialize error: {}", e))?;
-    Ok(Some(asset))
-}
-
-pub async fn delete_asset(id: &str) -> Result<(), String> {
-    let db = open_db().await?;
-    let transaction = db
-        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readwrite)
-        .map_err(|e| format!("Transaction error: {:?}", e))?;
-    let store = transaction
-        .object_store(STORE_NAME)
+        .object_store(PHOTO_STORE)
         .map_err(|e| format!("Store error: {:?}", e))?;
 
     let request = store
@@ -223,35 +202,15 @@ pub async fn delete_asset(id: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub async fn clear_all_assets() -> Result<(), String> {
-    let db = open_db().await?;
-    let transaction = db
-        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readwrite)
-        .map_err(|e| format!("Transaction error: {:?}", e))?;
-    let store = transaction
-        .object_store(STORE_NAME)
-        .map_err(|e| format!("Store error: {:?}", e))?;
-
-    let request = store
-        .clear()
-        .map_err(|e| format!("Clear error: {:?}", e))?;
-
-    let rx = idb_request_to_future(&request);
-    rx.await.map_err(|_| "Channel error".to_string())??;
+pub async fn delete_photos_for_asset(asset_id: &str) -> Result<(), String> {
+    let photos = get_photos_for_asset(asset_id).await?;
+    for photo in &photos {
+        delete_photo(&photo.id).await?;
+    }
     Ok(())
 }
 
-pub async fn export_all_assets() -> Result<String, String> {
-    let assets = get_all_assets().await?;
-    serde_json::to_string_pretty(&assets).map_err(|e| format!("Serialize error: {}", e))
-}
-
-pub async fn import_assets(json: &str) -> Result<usize, String> {
-    let assets: Vec<Asset> = serde_json::from_str(json)
-        .map_err(|e| format!("Parse error: {}", e))?;
-    let count = assets.len();
-    for asset in &assets {
-        save_asset(asset).await?;
-    }
-    Ok(count)
+pub async fn count_photos_for_asset(asset_id: &str) -> Result<usize, String> {
+    let photos = get_photos_for_asset(asset_id).await?;
+    Ok(photos.len())
 }

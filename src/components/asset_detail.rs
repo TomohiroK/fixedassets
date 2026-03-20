@@ -3,6 +3,7 @@ use crate::i18n::use_i18n;
 use crate::models::asset::Asset;
 use crate::models::depreciation;
 use crate::components::common::format_currency;
+use crate::components::photo_uploader::PhotoGallery;
 
 #[component]
 pub fn AssetDetailView(asset: Asset) -> impl IntoView {
@@ -51,7 +52,10 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
         format!("{}{}", asset.prior_depreciation_years, i18n.t("asset.years"))
     };
 
+    let asset_id_for_photos = asset.id.clone();
+
     // Collapsible section states
+    let show_photos = RwSignal::new(false);
     let show_financials = RwSignal::new(false);
     let show_details = RwSignal::new(false);
     let show_schedule = RwSignal::new(false);
@@ -62,6 +66,12 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
             <div class="card py-3">
                 <div class="flex items-center justify-between">
                     <div class="flex-1 min-w-0 mr-2">
+                        {if !asset.asset_number.is_empty() {
+                            let num = asset.asset_number.clone();
+                            Some(view! { <p class="text-[10px] text-gray-400 font-mono">{num}</p> })
+                        } else {
+                            None
+                        }}
                         <h2 class="text-lg font-bold text-gray-900 truncate">{asset.name.clone()}</h2>
                         <p class="text-xs text-gray-500">{move || i18n.t(&category_key)}</p>
                     </div>
@@ -97,6 +107,37 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                         }}
                     </div>
                 </div>
+            </div>
+
+            // Collapsible: Photos
+            <div class="card py-0 overflow-hidden">
+                <button
+                    class="w-full flex items-center justify-between py-3 active:bg-gray-50"
+                    on:click=move |_| show_photos.update(|v| *v = !*v)
+                >
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span class="text-sm font-semibold text-gray-900">{move || i18n.t("photo.title")}</span>
+                    </div>
+                    <svg
+                        class=move || format!("w-4 h-4 text-gray-400 transition-transform {}", if show_photos.get() { "rotate-180" } else { "" })
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                {move || if show_photos.get() {
+                    let aid = asset_id_for_photos.clone();
+                    view! {
+                        <div class="pb-3 border-t border-gray-100 pt-2">
+                            <PhotoGallery asset_id=aid editable=true />
+                        </div>
+                    }.into_any()
+                } else {
+                    view! { <div></div> }.into_any()
+                }}
             </div>
 
             // Collapsible: Financial breakdown
@@ -217,9 +258,18 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                                                     } else {
                                                         ""
                                                     };
+                                                    let label_text = row.label.clone().unwrap_or_default();
+                                                    let has_label = !label_text.is_empty();
                                                     view! {
                                                         <tr class=format!("border-b border-gray-100 {}", row_class)>
-                                                            <td class="py-1.5">{row.year} {if row.is_prior { " *" } else { "" }}</td>
+                                                            <td class="py-1.5">
+                                                                {row.year} {if row.is_prior { " *" } else { "" }}
+                                                                {if has_label {
+                                                                    Some(view! { <span class="ml-1 text-[9px] text-blue-500 font-medium">{label_text}</span> })
+                                                                } else {
+                                                                    None
+                                                                }}
+                                                            </td>
                                                             <td class="text-right py-1.5">{format_currency(&row.opening_value)}</td>
                                                             <td class="text-right py-1.5 text-orange-600">{format_currency(&row.expense)}</td>
                                                             <td class="text-right py-1.5">{format_currency(&row.closing_value)}</td>

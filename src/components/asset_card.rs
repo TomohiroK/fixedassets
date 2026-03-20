@@ -7,17 +7,26 @@ use crate::components::common::format_currency;
 pub fn AssetRow(asset: Asset) -> impl IntoView {
     let i18n = use_i18n();
     let id = asset.id.clone();
+    let asset_num = asset.asset_number.clone();
+    let has_num = !asset_num.is_empty();
     let name = asset.name.clone();
     let cost = asset.cost;
     let status_class = asset.status.badge_class().to_string();
     let status_key = asset.status.i18n_key().to_string();
+    let category_key = asset.category.i18n_key().to_string();
     let tags = asset.tags.clone();
     let has_tags = !tags.is_empty();
 
     view! {
         <a href=format!("/assets/{}", id) class="flex items-center justify-between py-3 px-4 active:bg-gray-50 transition-colors border-b border-gray-100">
             <div class="flex-1 min-w-0 mr-3">
+                {if has_num {
+                    Some(view! { <p class="text-[10px] text-gray-400 leading-tight">{asset_num}</p> })
+                } else {
+                    None
+                }}
                 <p class="text-sm font-medium text-gray-900 truncate">{name}</p>
+                <p class="text-[10px] text-gray-500">{move || i18n.t(&category_key)}</p>
                 {if has_tags {
                     Some(view! {
                         <div class="flex gap-1 mt-0.5 overflow-hidden">

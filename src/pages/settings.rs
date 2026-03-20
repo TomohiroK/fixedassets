@@ -3,6 +3,7 @@ use leptos_router::hooks::use_navigate;
 use crate::i18n::use_i18n;
 use crate::auth::use_auth;
 use crate::stores::asset_store;
+use crate::models::company::CompanySetup;
 
 #[component]
 pub fn SettingsPage() -> impl IntoView {
@@ -10,6 +11,18 @@ pub fn SettingsPage() -> impl IntoView {
     let auth = use_auth();
     let navigate = use_navigate();
     let status_message = RwSignal::new(Option::<String>::None);
+
+    let setup = CompanySetup::load();
+    let country_display = setup.as_ref().and_then(|s| s.country()).map(|c| {
+        format!("{} {}", c.flag(), c.name_en())
+    }).unwrap_or_else(|| "—".to_string());
+    let currency_display = setup.as_ref().and_then(|s| s.currency()).map(|c| {
+        format!("{} {}", c.symbol(), c.code())
+    }).unwrap_or_else(|| "—".to_string());
+    let company_name_signal = RwSignal::new(
+        setup.as_ref().map(|s| s.company_name.clone()).unwrap_or_default()
+    );
+    let editing_name = RwSignal::new(false);
 
     view! {
         <div class="page-container">
@@ -39,6 +52,89 @@ pub fn SettingsPage() -> impl IntoView {
                     </div>
                 }
             })}
+
+            // Company / Country info
+            <div class="card mb-4">
+                <h3 class="font-semibold text-gray-900 mb-3">{move || i18n.t("setup.company_info")}</h3>
+                <div class="space-y-2">
+                    // Company name - editable
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-500">{move || i18n.t("setup.company_name")}</span>
+                        {move || if editing_name.get() {
+                            view! {
+                                <div class="flex items-center gap-1.5">
+                                    <input
+                                        type="text"
+                                        class="text-sm border border-blue-300 rounded-lg px-2 py-1 w-40 text-right"
+                                        prop:value=move || company_name_signal.get()
+                                        on:input=move |ev| company_name_signal.set(event_target_value(&ev))
+                                    />
+                                    <button
+                                        class="text-blue-600 font-medium text-xs px-2 py-1"
+                                        on:click=move |_| {
+                                            let new_name = company_name_signal.get().trim().to_string();
+                                            if !new_name.is_empty() {
+                                                if let Some(mut s) = CompanySetup::load() {
+                                                    s.company_name = new_name;
+                                                    s.save();
+                                                }
+                                            }
+                                            editing_name.set(false);
+                                        }
+                                    >{move || i18n.t("asset.save")}</button>
+                                </div>
+                            }.into_any()
+                        } else {
+                            view! {
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-medium text-gray-900">{move || company_name_signal.get()}</span>
+                                    <button
+                                        class="text-gray-400 p-0.5"
+                                        on:click=move |_| editing_name.set(true)
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            }.into_any()
+                        }}
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">{move || i18n.t("setup.country")}</span>
+                        <span class="font-medium text-gray-900">{country_display.clone()}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">{move || i18n.t("setup.currency")}</span>
+                        <span class="font-medium text-gray-900">{currency_display.clone()}</span>
+                    </div>
+                </div>
+                <button
+                    class="w-full mt-4 py-2.5 text-sm text-orange-600 font-medium border border-orange-200 rounded-lg active:bg-orange-50"
+                    on:click=move |_| {
+                        let msg = i18n.t("setup.change_country_warning");
+                        let window = web_sys::window().unwrap();
+                        if window.confirm_with_message(&msg).unwrap_or(false) {
+                            // Clear all data
+                            leptos::task::spawn_local(async move {
+                                let _ = asset_store::clear_all_assets().await;
+                                CompanySetup::clear();
+                                // Clear auth
+                                if let Some(window) = web_sys::window() {
+                                    if let Ok(Some(storage)) = window.local_storage() {
+                                        let _ = storage.remove_item("fa_user");
+                                        let _ = storage.remove_item("fa_users");
+                                        let _ = storage.remove_item("fa_user_plans");
+                                    }
+                                    let _ = window.location().set_href("/setup");
+                                }
+                            });
+                        }
+                    }
+                >
+                    {move || i18n.t("setup.change_country")}
+                </button>
+            </div>
 
             // Admin link
             <a href="/admin" class="card mb-4 block active:bg-gray-50 transition-colors">

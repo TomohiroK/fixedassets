@@ -57,6 +57,13 @@ pub fn SearchBar(
 }
 
 pub fn format_currency(amount: &rust_decimal::Decimal) -> String {
+    use crate::models::company::CompanySetup;
+
+    let symbol = CompanySetup::load()
+        .and_then(|s| s.currency())
+        .map(|c| c.symbol().to_string())
+        .unwrap_or_else(|| "$".to_string());
+
     let s = format!("{:.2}", amount);
     let parts: Vec<&str> = s.split('.').collect();
     let int_part = parts[0];
@@ -75,8 +82,8 @@ pub fn format_currency(amount: &rust_decimal::Decimal) -> String {
     }
 
     if is_negative {
-        format!("-{}.{}", formatted, dec_part)
+        format!("{}-{}.{}", symbol, formatted, dec_part)
     } else {
-        format!("{}.{}", formatted, dec_part)
+        format!("{}{}.{}", symbol, formatted, dec_part)
     }
 }

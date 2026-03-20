@@ -7,3 +7,4 @@ pub mod landing;
 pub mod login;
 pub mod signup;
 pub mod admin;
+pub mod setup;

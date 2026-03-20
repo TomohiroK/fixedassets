@@ -3,6 +3,8 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 use crate::i18n::use_i18n;
 use crate::models::asset::*;
+use crate::models::depreciation;
+use crate::components::photo_uploader::PhotoGallery;
 
 #[component]
 pub fn AssetForm(
@@ -13,8 +15,11 @@ pub fn AssetForm(
     let i18n = use_i18n();
     let is_edit = initial.is_some();
 
+    let asset_number = RwSignal::new(initial.as_ref().map(|a| a.asset_number.clone()).unwrap_or_default());
     let name = RwSignal::new(initial.as_ref().map(|a| a.name.clone()).unwrap_or_default());
-    let category = RwSignal::new(initial.as_ref().map(|a| a.category.to_index()).unwrap_or(0));
+    let initial_category_index = initial.as_ref().map(|a| a.category.to_index()).unwrap_or(0);
+    let category = RwSignal::new(initial_category_index);
+    let category_ref = NodeRef::<leptos::html::Select>::new();
     let acquisition_date = RwSignal::new(
         initial.as_ref().map(|a| a.acquisition_date.clone())
             .unwrap_or_else(|| chrono::Utc::now().format("%Y-%m-%d").to_string()),
@@ -23,14 +28,13 @@ pub fn AssetForm(
         initial.as_ref().map(|a| a.cost.to_string()).unwrap_or_else(|| "0".to_string()),
     );
     let salvage_value = RwSignal::new(
-        initial.as_ref().map(|a| a.salvage_value.to_string()).unwrap_or_else(|| "0".to_string()),
+        initial.as_ref().map(|a| a.salvage_value.to_string()).unwrap_or_else(|| "1".to_string()),
     );
     let useful_life = RwSignal::new(
         initial.as_ref().map(|a| a.useful_life.to_string()).unwrap_or_else(|| "5".to_string()),
     );
-    let depreciation_method = RwSignal::new(
-        initial.as_ref().map(|a| a.depreciation_method.to_index()).unwrap_or(0),
-    );
+    let initial_method_index = initial.as_ref().map(|a| a.depreciation_method.to_index()).unwrap_or(0);
+    let depreciation_method = RwSignal::new(initial_method_index);
     let prior_years = RwSignal::new(
         initial.as_ref().map(|a| a.prior_depreciation_years.to_string()).unwrap_or_else(|| "0".to_string()),
     );
@@ -39,11 +43,13 @@ pub fn AssetForm(
     );
     let location = RwSignal::new(initial.as_ref().map(|a| a.location.clone()).unwrap_or_default());
     let description = RwSignal::new(initial.as_ref().map(|a| a.description.clone()).unwrap_or_default());
-    let status = RwSignal::new(initial.as_ref().map(|a| a.status.to_index()).unwrap_or(0));
+    let initial_status_index = initial.as_ref().map(|a| a.status.to_index()).unwrap_or(0);
+    let status = RwSignal::new(initial_status_index);
     let tags = RwSignal::new(initial.as_ref().map(|a| a.tags.clone()).unwrap_or_default());
     let tag_input = RwSignal::new(String::new());
 
     let initial_clone = initial.clone();
+    let edit_asset_id = initial.as_ref().map(|a| a.id.clone());
 
     view! {
         <form
@@ -58,6 +64,7 @@ pub fn AssetForm(
 
                 let asset = if let Some(ref existing) = initial_clone {
                     let mut a = existing.clone();
+                    a.asset_number = asset_number.get();
                     a.name = name.get();
                     a.category = Category::from_index(category.get());
                     a.acquisition_date = acquisition_date.get();
@@ -75,6 +82,7 @@ pub fn AssetForm(
                     a
                 } else {
                     Asset::new(
+                        asset_number.get(),
                         name.get(),
                         Category::from_index(category.get()),
                         acquisition_date.get(),
@@ -93,6 +101,18 @@ pub fn AssetForm(
                 on_submit.run(asset);
             }
         >
+            // Asset Number (optional)
+            <div>
+                <label class="label">{move || i18n.t("asset.asset_number")}</label>
+                <input
+                    type="text"
+                    class="input-field"
+                    placeholder=move || i18n.t("asset.asset_number_placeholder")
+                    prop:value=move || asset_number.get()
+                    on:input=move |ev| asset_number.set(event_target_value(&ev))
+                />
+            </div>
+
             // Asset Name
             <div>
                 <label class="label">{move || i18n.t("asset.name")}</label>
@@ -110,16 +130,24 @@ pub fn AssetForm(
                 <label class="label">{move || i18n.t("asset.category")}</label>
                 <select
                     class="input-field"
-                    prop:value=move || category.get().to_string()
+                    node_ref=category_ref
                     on:change=move |ev| {
                         let val: usize = event_target_value(&ev).parse().unwrap_or(0);
                         category.set(val);
+                        // Auto-suggest useful life based on country rules
+                        if !is_edit {
+                            let cat = Category::from_index(val);
+                            if let Some(life) = depreciation::suggested_useful_life(&cat) {
+                                useful_life.set(life.to_string());
+                            }
+                        }
                     }
                 >
                     {Category::all().into_iter().enumerate().map(|(i, cat)| {
+                        let initial_cat = initial_category_index;
                         let key = cat.i18n_key().to_string();
                         view! {
-                            <option value=i.to_string()>{move || i18n.t(&key)}</option>
+                            <option value=i.to_string() selected=move || i == initial_cat>{move || i18n.t(&key)}</option>
                         }
                     }).collect::<Vec<_>>()}
                 </select>
@@ -151,85 +179,142 @@ pub fn AssetForm(
                 />
             </div>
 
-            // Salvage Value
-            <div>
-                <label class="label">{move || i18n.t("asset.salvage_value")}</label>
-                <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    class="input-field"
-                    prop:value=move || salvage_value.get()
-                    on:input=move |ev| salvage_value.set(event_target_value(&ev))
-                />
-            </div>
-
-            // Useful Life
-            <div>
-                <label class="label">{move || i18n.t("asset.useful_life")}</label>
-                <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    class="input-field"
-                    required=true
-                    prop:value=move || useful_life.get()
-                    on:input=move |ev| useful_life.set(event_target_value(&ev))
-                />
-            </div>
-
-            // Depreciation Method
-            <div>
-                <label class="label">{move || i18n.t("asset.depreciation_method")}</label>
-                <select
-                    class="input-field"
-                    prop:value=move || depreciation_method.get().to_string()
-                    on:change=move |ev| {
-                        let val: usize = event_target_value(&ev).parse().unwrap_or(0);
-                        depreciation_method.set(val);
-                    }
-                >
-                    {DepreciationMethod::all().into_iter().enumerate().map(|(i, method)| {
-                        let key = method.i18n_key().to_string();
-                        view! {
-                            <option value=i.to_string()>{move || i18n.t(&key)}</option>
-                        }
-                    }).collect::<Vec<_>>()}
-                </select>
-            </div>
-
-            // Prior Depreciation (for used assets)
-            <div>
-                <label class="label">{move || i18n.t("asset.prior_depreciation")}</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <div class="flex items-center gap-1">
-                            <input
-                                type="number"
-                                min="0"
-                                max="99"
-                                class="input-field"
-                                prop:value=move || prior_years.get()
-                                on:input=move |ev| prior_years.set(event_target_value(&ev))
-                            />
-                            <span class="text-sm text-gray-500 shrink-0">{move || i18n.t("asset.years")}</span>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-1">
-                            <input
-                                type="number"
-                                min="0"
-                                max="11"
-                                class="input-field"
-                                prop:value=move || prior_months.get()
-                                on:input=move |ev| prior_months.set(event_target_value(&ev))
-                            />
-                            <span class="text-sm text-gray-500 shrink-0">{move || i18n.t("asset.months")}</span>
-                        </div>
-                    </div>
+            // Non-depreciable notice (shown only for land/leasehold/construction)
+            <div class=move || {
+                let cat = Category::from_index(category.get());
+                if depreciation::is_non_depreciable(&cat) { "" } else { "hidden" }
+            }>
+                <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p class="text-sm text-gray-500 flex items-center gap-2">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {move || i18n.t("asset.non_depreciable_notice")}
+                    </p>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">{move || i18n.t("asset.prior_depreciation_hint")}</p>
+            </div>
+
+            // Depreciation fields (hidden for non-depreciable assets)
+            <div class=move || {
+                let cat = Category::from_index(category.get());
+                if depreciation::is_non_depreciable(&cat) { "hidden" } else { "space-y-4" }
+            }>
+                // Salvage Value
+                <div>
+                    <label class="label">{move || i18n.t("asset.salvage_value")}</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        class="input-field"
+                        prop:value=move || salvage_value.get()
+                        on:input=move |ev| salvage_value.set(event_target_value(&ev))
+                    />
+                    // Intangible notice
+                    <p class=move || {
+                        let cat = Category::from_index(category.get());
+                        if depreciation::is_intangible(&cat) { "text-xs text-blue-500 mt-1" } else { "hidden" }
+                    }>{move || i18n.t("asset.intangible_salvage_zero")}</p>
+                    // Normal hint
+                    <p class=move || {
+                        let cat = Category::from_index(category.get());
+                        if depreciation::is_intangible(&cat) { "hidden" } else { "text-xs text-gray-400 mt-1" }
+                    }>{move || i18n.t("asset.salvage_hint")}</p>
+                    // Warning when salvage >= cost
+                    {move || {
+                        let c: f64 = cost.get().parse().unwrap_or(0.0);
+                        let s: f64 = salvage_value.get().parse().unwrap_or(0.0);
+                        if s > 0.0 && s >= c {
+                            Some(view! {
+                                <p class="text-xs text-red-500 mt-1 flex items-center gap-1">
+                                    <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    {move || i18n.t("asset.salvage_warning")}
+                                </p>
+                            })
+                        } else {
+                            None
+                        }
+                    }}
+                </div>
+
+                // Useful Life
+                <div>
+                    <label class="label">{move || i18n.t("asset.useful_life")}</label>
+                    <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        class="input-field"
+                        required=true
+                        prop:value=move || useful_life.get()
+                        on:input=move |ev| useful_life.set(event_target_value(&ev))
+                    />
+                </div>
+
+                // Depreciation Method
+                <div>
+                    <label class="label">{move || i18n.t("asset.depreciation_method")}</label>
+                    <select
+                        class="input-field"
+                        on:change=move |ev| {
+                            let val: usize = event_target_value(&ev).parse().unwrap_or(0);
+                            depreciation_method.set(val);
+                        }
+                    >
+                        {DepreciationMethod::all().into_iter().enumerate().map(|(i, method)| {
+                            let init_m = initial_method_index;
+                            let key = method.i18n_key().to_string();
+                            view! {
+                                <option value=i.to_string() selected=move || i == init_m>{move || i18n.t(&key)}</option>
+                            }
+                        }).collect::<Vec<_>>()}
+                    </select>
+                    // Intangible notice
+                    <p class=move || {
+                        let cat = Category::from_index(category.get());
+                        if depreciation::is_intangible(&cat) || !depreciation::can_use_declining_balance(&cat) {
+                            "text-xs text-blue-500 mt-1"
+                        } else {
+                            "hidden"
+                        }
+                    }>{move || i18n.t("asset.intangible_method_notice")}</p>
+                </div>
+
+                // Prior Depreciation (for used assets)
+                <div>
+                    <label class="label">{move || i18n.t("asset.prior_depreciation")}</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <div class="flex items-center gap-1">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="99"
+                                    class="input-field"
+                                    prop:value=move || prior_years.get()
+                                    on:input=move |ev| prior_years.set(event_target_value(&ev))
+                                />
+                                <span class="text-sm text-gray-500 shrink-0">{move || i18n.t("asset.years")}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="11"
+                                    class="input-field"
+                                    prop:value=move || prior_months.get()
+                                    on:input=move |ev| prior_months.set(event_target_value(&ev))
+                                />
+                                <span class="text-sm text-gray-500 shrink-0">{move || i18n.t("asset.months")}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">{move || i18n.t("asset.prior_depreciation_hint")}</p>
+                </div>
             </div>
 
             // Location
@@ -250,16 +335,16 @@ pub fn AssetForm(
                         <label class="label">{move || i18n.t("asset.status")}</label>
                         <select
                             class="input-field"
-                            prop:value=move || status.get().to_string()
                             on:change=move |ev| {
                                 let val: usize = event_target_value(&ev).parse().unwrap_or(0);
                                 status.set(val);
                             }
                         >
                             {AssetStatus::all().into_iter().enumerate().map(|(i, s)| {
+                                let init_s = initial_status_index;
                                 let key = s.i18n_key().to_string();
                                 view! {
-                                    <option value=i.to_string()>{move || i18n.t(&key)}</option>
+                                    <option value=i.to_string() selected=move || i == init_s>{move || i18n.t(&key)}</option>
                                 }
                             }).collect::<Vec<_>>()}
                         </select>
@@ -283,29 +368,8 @@ pub fn AssetForm(
             // Tags
             <div>
                 <label class="label">{move || i18n.t("asset.tags")}</label>
-                <div class="flex flex-wrap gap-1.5 mb-2">
-                    {move || {
-                        let current_tags = tags.get();
-                        current_tags.into_iter().map(|tag| {
-                            let tag_clone = tag.clone();
-                            let tag_display = tag.clone();
-                            view! {
-                                <span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                                    {tag_display}
-                                    <button
-                                        type="button"
-                                        class="text-blue-400 hover:text-blue-600 font-bold"
-                                        on:click=move |_| {
-                                            let t = tag_clone.clone();
-                                            tags.update(|v| v.retain(|x| x != &t));
-                                        }
-                                    >"×"</button>
-                                </span>
-                            }
-                        }).collect::<Vec<_>>()
-                    }}
-                </div>
-                <div class="flex gap-2">
+                // Input row
+                <div class="flex gap-2 mb-2">
                     <input
                         type="text"
                         class="input-field flex-1"
@@ -329,7 +393,7 @@ pub fn AssetForm(
                     />
                     <button
                         type="button"
-                        class="btn-secondary text-xs px-3 shrink-0"
+                        class="bg-blue-600 text-white text-sm font-bold px-4 rounded-lg shrink-0 active:bg-blue-700"
                         on:click=move |_| {
                             let val = tag_input.get().trim().to_string();
                             if !val.is_empty() {
@@ -343,7 +407,61 @@ pub fn AssetForm(
                         }
                     >"+"</button>
                 </div>
+                // Tag pills
+                {move || {
+                    let current_tags = tags.get();
+                    if current_tags.is_empty() {
+                        None
+                    } else {
+                        Some(view! {
+                            <div class="flex flex-wrap gap-1.5">
+                                {current_tags.into_iter().map(|tag| {
+                                    let tag_clone = tag.clone();
+                                    let tag_display = tag.clone();
+                                    view! {
+                                        <span class="inline-flex items-center gap-1 bg-blue-600 text-white text-xs font-medium px-2.5 py-1 rounded-full">
+                                            {tag_display}
+                                            <button
+                                                type="button"
+                                                class="text-blue-200 hover:text-white ml-0.5"
+                                                on:click=move |_| {
+                                                    let t = tag_clone.clone();
+                                                    tags.update(|v| v.retain(|x| x != &t));
+                                                }
+                                            >"×"</button>
+                                        </span>
+                                    }
+                                }).collect::<Vec<_>>()}
+                            </div>
+                        })
+                    }
+                }}
                 <p class="text-xs text-gray-400 mt-1">{move || i18n.t("asset.tag_hint")}</p>
+            </div>
+
+            // Photos
+            <div>
+                <label class="label">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        {move || i18n.t("photo.title")}
+                    </div>
+                </label>
+                {if let Some(aid) = edit_asset_id {
+                    view! {
+                        <div>
+                            <PhotoGallery asset_id=aid editable=true />
+                        </div>
+                    }.into_any()
+                } else {
+                    view! {
+                        <div class="text-xs text-gray-400 py-2 px-3 bg-gray-50 rounded-lg">
+                            {move || i18n.t("photo.save_first")}
+                        </div>
+                    }.into_any()
+                }}
             </div>
 
             // Submit

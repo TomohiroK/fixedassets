@@ -6,6 +6,8 @@ use uuid::Uuid;
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Asset {
     pub id: String,
+    #[serde(default)]
+    pub asset_number: String,
     pub name: String,
     pub category: Category,
     pub acquisition_date: String, // YYYY-MM-DD
@@ -28,6 +30,7 @@ pub struct Asset {
 
 impl Asset {
     pub fn new(
+        asset_number: String,
         name: String,
         category: Category,
         acquisition_date: String,
@@ -44,6 +47,7 @@ impl Asset {
         let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
         Self {
             id: Uuid::new_v4().to_string(),
+            asset_number,
             name,
             category,
             acquisition_date,
@@ -74,61 +78,106 @@ impl Asset {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum Category {
+    Land,
     Building,
-    Vehicle,
+    BuildingEquipment,
+    Structures,
     Machinery,
-    Furniture,
-    Electronics,
+    ToolsFixtures,
+    Vehicles,
+    LeasedAssets,
+    ConstructionInProgress,
+    Patents,
+    Trademarks,
+    LeaseholdRights,
     Software,
+    FacilityRights,
+    Goodwill,
     Other,
 }
 
 impl Category {
     pub fn all() -> Vec<Category> {
         vec![
+            Category::Land,
             Category::Building,
-            Category::Vehicle,
+            Category::BuildingEquipment,
+            Category::Structures,
             Category::Machinery,
-            Category::Furniture,
-            Category::Electronics,
+            Category::ToolsFixtures,
+            Category::Vehicles,
+            Category::LeasedAssets,
+            Category::ConstructionInProgress,
+            Category::Patents,
+            Category::Trademarks,
+            Category::LeaseholdRights,
             Category::Software,
+            Category::FacilityRights,
+            Category::Goodwill,
             Category::Other,
         ]
     }
 
     pub fn i18n_key(&self) -> &str {
         match self {
+            Category::Land => "category.land",
             Category::Building => "category.building",
-            Category::Vehicle => "category.vehicle",
+            Category::BuildingEquipment => "category.building_equipment",
+            Category::Structures => "category.structures",
             Category::Machinery => "category.machinery",
-            Category::Furniture => "category.furniture",
-            Category::Electronics => "category.electronics",
+            Category::ToolsFixtures => "category.tools_fixtures",
+            Category::Vehicles => "category.vehicles",
+            Category::LeasedAssets => "category.leased_assets",
+            Category::ConstructionInProgress => "category.construction_in_progress",
+            Category::Patents => "category.patents",
+            Category::Trademarks => "category.trademarks",
+            Category::LeaseholdRights => "category.leasehold_rights",
             Category::Software => "category.software",
+            Category::FacilityRights => "category.facility_rights",
+            Category::Goodwill => "category.goodwill",
             Category::Other => "category.other",
         }
     }
 
     pub fn from_index(i: usize) -> Self {
         match i {
-            0 => Category::Building,
-            1 => Category::Vehicle,
-            2 => Category::Machinery,
-            3 => Category::Furniture,
-            4 => Category::Electronics,
-            5 => Category::Software,
+            0 => Category::Land,
+            1 => Category::Building,
+            2 => Category::BuildingEquipment,
+            3 => Category::Structures,
+            4 => Category::Machinery,
+            5 => Category::ToolsFixtures,
+            6 => Category::Vehicles,
+            7 => Category::LeasedAssets,
+            8 => Category::ConstructionInProgress,
+            9 => Category::Patents,
+            10 => Category::Trademarks,
+            11 => Category::LeaseholdRights,
+            12 => Category::Software,
+            13 => Category::FacilityRights,
+            14 => Category::Goodwill,
             _ => Category::Other,
         }
     }
 
     pub fn to_index(&self) -> usize {
         match self {
-            Category::Building => 0,
-            Category::Vehicle => 1,
-            Category::Machinery => 2,
-            Category::Furniture => 3,
-            Category::Electronics => 4,
-            Category::Software => 5,
-            Category::Other => 6,
+            Category::Land => 0,
+            Category::Building => 1,
+            Category::BuildingEquipment => 2,
+            Category::Structures => 3,
+            Category::Machinery => 4,
+            Category::ToolsFixtures => 5,
+            Category::Vehicles => 6,
+            Category::LeasedAssets => 7,
+            Category::ConstructionInProgress => 8,
+            Category::Patents => 9,
+            Category::Trademarks => 10,
+            Category::LeaseholdRights => 11,
+            Category::Software => 12,
+            Category::FacilityRights => 13,
+            Category::Goodwill => 14,
+            Category::Other => 15,
         }
     }
 }
