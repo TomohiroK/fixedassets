@@ -1,23 +1,30 @@
 use leptos::prelude::*;
 use crate::i18n::use_i18n;
+use crate::auth::use_auth;
 
 #[component]
 pub fn TermsPage() -> impl IntoView {
     let i18n = use_i18n();
+    let auth = use_auth();
+
+    // Back link: logged in → /settings, not logged in → /welcome
+    let back_href = move || {
+        if auth.is_logged_in() { "/settings" } else { "/welcome" }
+    };
 
     view! {
         <div class="min-h-screen bg-gray-50">
             // Header
-            <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+            <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/60 sticky top-0 z-10">
                 <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-                    <a href="/welcome" class="text-blue-600 text-sm font-medium flex items-center gap-1">
+                    <a href=back_href class="text-gray-600 text-sm font-medium flex items-center gap-1">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                         </svg>
                         {move || i18n.t("app.title")}
                     </a>
                     <button
-                        class="text-xs bg-gray-100 px-2.5 py-1 rounded-md text-gray-600"
+                        class="text-xs text-gray-500 border border-gray-200 px-2.5 py-1 rounded-full active:bg-gray-100"
                         on:click=move |_| {
                             let current = i18n.current_locale();
                             let next = if current == "en" { "ja" } else { "en" };

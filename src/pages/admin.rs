@@ -15,10 +15,10 @@ pub fn AdminPage() -> impl IntoView {
     view! {
         <div class="min-h-screen bg-gray-50">
             // Header
-            <div class="bg-gray-900 text-white px-4 py-3">
+            <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/60 px-4 py-3">
                 <div class="flex items-center justify-between max-w-lg mx-auto">
-                    <h1 class="text-lg font-bold">{move || i18n.t("admin.title")}</h1>
-                    <a href="/" class="text-sm bg-gray-700 px-3 py-1.5 rounded-lg">
+                    <h1 class="text-lg font-bold text-gray-900">{move || i18n.t("admin.title")}</h1>
+                    <a href="/" class="text-xs text-gray-500 border border-gray-200 px-2.5 py-1 rounded-full active:bg-gray-100">
                         {move || i18n.t("admin.back_to_app")}
                     </a>
                 </div>

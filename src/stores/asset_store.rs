@@ -458,7 +458,6 @@ fn parse_category(s: &str) -> Category {
         "LeaseholdRights" | "借地権" => Category::LeaseholdRights,
         "Software" | "ソフトウエア" => Category::Software,
         "FacilityRights" | "施設利用権" => Category::FacilityRights,
-        "Goodwill" | "のれん" => Category::Goodwill,
         _ => Category::Other,
     }
 }

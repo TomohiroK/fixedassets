@@ -79,27 +79,29 @@ pub fn AssetListPage() -> impl IntoView {
                                 } else {
                                     "hidden"
                                 }>
-                                    // Category grid (2 columns like EC)
+                                    // Category grid (2 columns, photo cards)
                                     <div class="grid grid-cols-2 gap-3">
                                         {category_counts.iter().map(|(idx, cat, cnt)| {
-                                            let gradient = cat.gradient_class().to_string();
-                                            let emoji = cat.emoji().to_string();
+                                            let image_url = cat.image_path().to_string();
                                             let key = cat.i18n_key().to_string();
                                             let count = *cnt;
                                             let idx = *idx;
+                                            let bg_style = format!(
+                                                "background-image: url('{}'); background-size: cover; background-position: center; min-height: 120px;",
+                                                image_url
+                                            );
                                             view! {
                                                 <button
-                                                    class=format!("relative rounded-2xl overflow-hidden bg-gradient-to-br {} p-4 text-left active:scale-[0.97] transition-transform shadow-sm", gradient)
-                                                    style="min-height: 100px;"
+                                                    class="relative rounded-2xl overflow-hidden text-left active:scale-[0.97] transition-transform shadow-sm"
+                                                    style=bg_style
                                                     on:click=move |_| selected_category.set(Some(idx))
                                                 >
-                                                    // Large emoji background
-                                                    <div class="absolute -bottom-2 -right-2 text-5xl opacity-20 select-none">{emoji.clone()}</div>
-                                                    // Content
-                                                    <div class="relative z-10">
-                                                        <div class="text-2xl mb-1">{emoji.clone()}</div>
-                                                        <p class="text-white font-semibold text-sm leading-tight">{move || i18n.t(&key)}</p>
-                                                        <p class="text-white/70 text-xs mt-1">
+                                                    // Dark overlay for text readability
+                                                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+                                                    // Content at bottom
+                                                    <div class="relative z-10 h-full flex flex-col justify-end p-3">
+                                                        <p class="text-white font-semibold text-sm leading-tight drop-shadow-md">{move || i18n.t(&key)}</p>
+                                                        <p class="text-white/80 text-xs mt-0.5 drop-shadow-md">
                                                             {count} " " {move || i18n.t("asset.items")}
                                                         </p>
                                                     </div>

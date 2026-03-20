@@ -19,14 +19,14 @@ pub fn SignupPage() -> impl IntoView {
     view! {
         <div class="min-h-screen bg-gray-50 flex flex-col">
             // Header
-            <div class="bg-blue-700 text-white px-4 py-3">
+            <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/60 px-4 py-3">
                 <div class="flex items-center justify-between max-w-lg mx-auto">
-                    <a href="/welcome" class="flex items-center gap-2">
+                    <a href="/welcome" class="flex items-center gap-2 text-gray-600">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                         </svg>
                     </a>
-                    <h1 class="text-lg font-bold">{move || i18n.t("auth.sign_up")}</h1>
+                    <h1 class="text-lg font-bold text-gray-900">{move || i18n.t("auth.sign_up")}</h1>
                     <div class="w-5"></div>
                 </div>
             </div>

@@ -92,7 +92,6 @@ pub enum Category {
     LeaseholdRights,
     Software,
     FacilityRights,
-    Goodwill,
     Other,
 }
 
@@ -113,7 +112,6 @@ impl Category {
             Category::LeaseholdRights,
             Category::Software,
             Category::FacilityRights,
-            Category::Goodwill,
             Category::Other,
         ]
     }
@@ -134,7 +132,6 @@ impl Category {
             Category::LeaseholdRights => "category.leasehold_rights",
             Category::Software => "category.software",
             Category::FacilityRights => "category.facility_rights",
-            Category::Goodwill => "category.goodwill",
             Category::Other => "category.other",
         }
     }
@@ -155,7 +152,6 @@ impl Category {
             11 => Category::LeaseholdRights,
             12 => Category::Software,
             13 => Category::FacilityRights,
-            14 => Category::Goodwill,
             _ => Category::Other,
         }
     }
@@ -176,8 +172,7 @@ impl Category {
             Category::LeaseholdRights => 11,
             Category::Software => 12,
             Category::FacilityRights => 13,
-            Category::Goodwill => 14,
-            Category::Other => 15,
+            Category::Other => 14,
         }
     }
 
@@ -198,30 +193,28 @@ impl Category {
             Category::LeaseholdRights => "🔑",
             Category::Software => "💻",
             Category::FacilityRights => "🏭",
-            Category::Goodwill => "🤝",
             Category::Other => "📦",
         }
     }
 
-    /// Gradient color pair for category card background
-    pub fn gradient_class(&self) -> &str {
+    /// Photo image path for category card background
+    pub fn image_path(&self) -> &str {
         match self {
-            Category::Land => "from-emerald-400 to-emerald-600",
-            Category::Building => "from-blue-400 to-blue-600",
-            Category::BuildingEquipment => "from-cyan-400 to-cyan-600",
-            Category::Structures => "from-slate-400 to-slate-600",
-            Category::Machinery => "from-orange-400 to-orange-600",
-            Category::ToolsFixtures => "from-amber-400 to-amber-600",
-            Category::Vehicles => "from-red-400 to-red-600",
-            Category::LeasedAssets => "from-violet-400 to-violet-600",
-            Category::ConstructionInProgress => "from-yellow-400 to-yellow-600",
-            Category::Patents => "from-indigo-400 to-indigo-600",
-            Category::Trademarks => "from-pink-400 to-pink-600",
-            Category::LeaseholdRights => "from-teal-400 to-teal-600",
-            Category::Software => "from-purple-400 to-purple-600",
-            Category::FacilityRights => "from-rose-400 to-rose-600",
-            Category::Goodwill => "from-sky-400 to-sky-600",
-            Category::Other => "from-gray-400 to-gray-600",
+            Category::Land => "/images/categories/land.webp",
+            Category::Building => "/images/categories/building.webp",
+            Category::BuildingEquipment => "/images/categories/building_equipment.webp",
+            Category::Structures => "/images/categories/structures.webp",
+            Category::Machinery => "/images/categories/machinery.webp",
+            Category::ToolsFixtures => "/images/categories/tools_fixtures.webp",
+            Category::Vehicles => "/images/categories/vehicles.webp",
+            Category::LeasedAssets => "/images/categories/leased_assets.webp",
+            Category::ConstructionInProgress => "/images/categories/construction.webp",
+            Category::Patents => "/images/categories/patents.webp",
+            Category::Trademarks => "/images/categories/trademarks.webp",
+            Category::LeaseholdRights => "/images/categories/leasehold_rights.webp",
+            Category::Software => "/images/categories/software.webp",
+            Category::FacilityRights => "/images/categories/facility_rights.webp",
+            Category::Other => "/images/categories/other.webp",
         }
     }
 }

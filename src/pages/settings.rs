@@ -279,7 +279,7 @@ pub fn SettingsPage() -> impl IntoView {
 
                         <p class="font-semibold text-gray-700 pt-2">{move || i18n.t("settings.category_values")}</p>
                         <p class="font-mono leading-relaxed">
-                            "Land, Building, BuildingEquipment, Structures, Machinery, ToolsFixtures, Vehicles, LeasedAssets, ConstructionInProgress, Patents, Trademarks, LeaseholdRights, Software, FacilityRights, Goodwill, Other"
+                            "Land, Building, BuildingEquipment, Structures, Machinery, ToolsFixtures, Vehicles, LeasedAssets, ConstructionInProgress, Patents, Trademarks, LeaseholdRights, Software, FacilityRights, Other"
                         </p>
                         <p class="text-gray-500 italic">{move || i18n.t("settings.category_ja_hint")}</p>
                     </div>

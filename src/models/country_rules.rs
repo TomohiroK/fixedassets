@@ -71,7 +71,7 @@ impl CountryRules {
         matches!(
             category,
             Category::Patents | Category::Trademarks | Category::Software
-                | Category::FacilityRights | Category::Goodwill
+                | Category::FacilityRights
         )
     }
 
@@ -145,7 +145,6 @@ impl CountryRules {
                 Category::Software => Some(5),
                 Category::Patents => Some(8),
                 Category::Trademarks => Some(10),
-                Category::Goodwill => Some(5),
                 Category::FacilityRights => Some(5),
                 _ => None,
             },
@@ -160,7 +159,7 @@ impl CountryRules {
                 Category::Machinery => Some(5),
                 Category::Vehicles => Some(5),
                 Category::Software => Some(3),
-                Category::Patents | Category::Trademarks | Category::Goodwill => Some(10),
+                Category::Patents | Category::Trademarks => Some(10),
                 _ => Some(5),
             },
             AseanCountry::Indonesia => match category {
