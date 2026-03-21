@@ -6,7 +6,7 @@ use crate::models::asset::{AssetStatus, Category};
 use crate::components::common::{LoadingSpinner, use_confirm, ConfirmStyle};
 use crate::components::asset_detail::AssetDetailView;
 use crate::components::asset_form::AssetForm;
-use crate::components::modals::{DisposalInfoSection, DisposeModal, SellModal, CipTransferModal, ImpairmentModal, ImpairmentInfoSection, CapExModal, CapExInfoSection};
+use crate::components::modals::{DisposalInfoSection, DisposeModal, SellModal, CipTransferModal, ImpairmentModal, ImpairmentInfoSection, CapExModal, CapExInfoSection, TransferDeptModal, TransferInfoSection};
 
 #[component]
 pub fn AssetDetailPage() -> impl IntoView {
@@ -19,6 +19,7 @@ pub fn AssetDetailPage() -> impl IntoView {
     let show_transfer_modal = RwSignal::new(false);
     let show_impairment_modal = RwSignal::new(false);
     let show_capex_modal = RwSignal::new(false);
+    let show_transfer_dept_modal = RwSignal::new(false);
     let refresh_trigger = RwSignal::new(0u32);
     let confirm = use_confirm();
 
@@ -58,6 +59,10 @@ pub fn AssetDetailPage() -> impl IntoView {
                                 let capex_for_info = asset_data.capex_records.clone();
                                 let total_capex = asset_data.total_capex();
                                 let original_cost = asset_data.cost;
+                                let has_transfers = !asset_data.transfers.is_empty();
+                                let transfers_for_info = asset_data.transfers.clone();
+                                let current_dept_id = asset_data.department_id.clone();
+                                let asset_for_transfer_dept = asset_data.clone();
 
                                 view! {
                                     <div>
@@ -132,6 +137,18 @@ pub fn AssetDetailPage() -> impl IntoView {
                                                             None
                                                         }}
 
+                                                        // Transfer history section
+                                                        {if has_transfers {
+                                                            Some(view! {
+                                                                <TransferInfoSection
+                                                                    transfers=transfers_for_info.clone()
+                                                                    current_department_id=current_dept_id.clone()
+                                                                />
+                                                            })
+                                                        } else {
+                                                            None
+                                                        }}
+
                                                         // CapEx info section (show if any CapEx recorded)
                                                         {if has_capex {
                                                             Some(view! {
@@ -158,6 +175,23 @@ pub fn AssetDetailPage() -> impl IntoView {
                                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                                                                         </svg>
                                                                         {move || i18n.t("asset.transfer_cip")}
+                                                                    </button>
+                                                                }.into_any())
+                                                            } else {
+                                                                None
+                                                            }}
+
+                                                            // Department Transfer button (for InUse assets)
+                                                            {if !is_disposed {
+                                                                Some(view! {
+                                                                    <button
+                                                                        class="w-full py-3 text-indigo-600 font-medium border border-indigo-200 rounded-lg active:bg-indigo-50 flex items-center justify-center gap-2"
+                                                                        on:click=move |_| show_transfer_dept_modal.set(true)
+                                                                    >
+                                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                                                        </svg>
+                                                                        {move || i18n.t("asset.transfer_dept")}
                                                                     </button>
                                                                 }.into_any())
                                                             } else {
@@ -344,6 +378,16 @@ pub fn AssetDetailPage() -> impl IntoView {
                                                             asset=asset_for_capex.clone()
                                                             on_recorded=Callback::new(move |_| {
                                                                 show_capex_modal.set(false);
+                                                                refresh_trigger.update(|v| *v += 1);
+                                                            })
+                                                        />
+
+                                                        // Department Transfer modal overlay
+                                                        <TransferDeptModal
+                                                            show=show_transfer_dept_modal
+                                                            asset=asset_for_transfer_dept.clone()
+                                                            on_transferred=Callback::new(move |_| {
+                                                                show_transfer_dept_modal.set(false);
                                                                 refresh_trigger.update(|v| *v += 1);
                                                             })
                                                         />

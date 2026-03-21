@@ -394,6 +394,17 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
             .map(|s| s.split(';').map(|t| t.trim().to_string()).filter(|t| !t.is_empty()).collect())
             .unwrap_or_default();
 
+        // Column 14: department (by code or name)
+        let department_id = fields.get(14)
+            .filter(|s| !s.is_empty())
+            .and_then(|dept_str| {
+                use crate::models::department::Department;
+                let depts = Department::load_all();
+                depts.into_iter().find(|d| {
+                    d.code.eq_ignore_ascii_case(dept_str) || d.name == *dept_str
+                }).map(|d| d.id)
+            });
+
         let mut asset = Asset::new(
             asset_number,
             name,
@@ -410,6 +421,7 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
             tags,
         );
         asset.status = status;
+        asset.department_id = department_id;
 
         save_asset(&asset).await?;
         count += 1;
@@ -482,10 +494,10 @@ fn parse_status(s: &str) -> AssetStatus {
 
 /// Generate CSV template string
 pub fn csv_template() -> String {
-    "asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags\n\
-     FA-001,Office Desk,ToolsFixtures,2024-04-01,50000,1,8,SL,Tokyo Office,Executive desk,0,0,InUse,office;furniture\n\
-     FA-002,Delivery Van,Vehicles,2023-10-15,2500000,1,6,DB,Warehouse,Toyota HiAce,1,3,InUse,vehicle;delivery\n\
-     FA-003,Accounting Software,Software,2024-01-01,300000,0,5,SL,,Cloud license,0,0,InUse,software;accounting\n".to_string()
+    "asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department\n\
+     FA-001,Office Desk,ToolsFixtures,2024-04-01,50000,1,8,SL,Tokyo Office,Executive desk,0,0,InUse,office;furniture,SALES\n\
+     FA-002,Delivery Van,Vehicles,2023-10-15,2500000,1,6,DB,Warehouse,Toyota HiAce,1,3,InUse,vehicle;delivery,\n\
+     FA-003,Accounting Software,Software,2024-01-01,300000,0,5,SL,,Cloud license,0,0,InUse,software;accounting,IT\n".to_string()
 }
 
 /// Generate JSON template string
@@ -531,7 +543,7 @@ use crate::models::asset::{Category, DepreciationMethod, AssetStatus};
 /// Export all assets as CSV
 pub async fn export_all_assets_csv() -> Result<String, String> {
     let assets = get_all_assets().await?;
-    let mut csv = String::from("asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags\n");
+    let mut csv = String::from("asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department\n");
 
     for a in &assets {
         let category = format!("{:?}", a.category);
@@ -541,9 +553,15 @@ pub async fn export_all_assets_csv() -> Result<String, String> {
         };
         let status = format!("{:?}", a.status);
         let tags = a.tags.join(";");
+        let dept_code = a.department_id.as_ref()
+            .and_then(|id| {
+                use crate::models::department::Department;
+                Department::find_by_id(id).map(|d| d.code)
+            })
+            .unwrap_or_default();
 
         csv.push_str(&format!(
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
             csv_escape(&a.asset_number),
             csv_escape(&a.name),
             category,
@@ -558,6 +576,7 @@ pub async fn export_all_assets_csv() -> Result<String, String> {
             a.prior_depreciation_months,
             status,
             csv_escape(&tags),
+            csv_escape(&dept_code),
         ));
     }
 

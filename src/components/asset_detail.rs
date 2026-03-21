@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use crate::i18n::use_i18n;
 use crate::models::asset::Asset;
 use crate::models::depreciation;
+use crate::models::department::Department;
 use crate::components::common::format_currency;
 use crate::components::photo_uploader::PhotoGallery;
 
@@ -52,6 +53,10 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
     let description = asset.description.clone();
     let has_location = !asset.location.is_empty();
     let has_description = !asset.description.is_empty();
+    let has_department = asset.department_id.is_some();
+    let department_name = asset.department_id.as_ref()
+        .map(|id| Department::display_name(id))
+        .unwrap_or_default();
     let has_prior = prior_months > 0;
     let tags = asset.tags.clone();
     let has_tags = !tags.is_empty();
@@ -225,6 +230,12 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                             {if has_prior {
                                 let prior_str = prior_str.clone();
                                 Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.prior_depreciation")) value=prior_str.clone() /> })
+                            } else {
+                                None
+                            }}
+                            {if has_department {
+                                let dept = department_name.clone();
+                                Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.department")) value=dept.clone() /> })
                             } else {
                                 None
                             }}

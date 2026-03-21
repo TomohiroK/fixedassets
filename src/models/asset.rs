@@ -19,6 +19,15 @@ pub struct CapExRecord {
     pub description: String,    // What was added/improved
 }
 
+/// Record of an asset transfer between departments (配置転換)
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct TransferRecord {
+    pub date: String,               // YYYY-MM-DD
+    pub from_department_id: Option<String>,  // None = unassigned
+    pub to_department_id: String,    // destination department
+    pub reason: String,              // reason for transfer
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Asset {
     pub id: String,
@@ -61,6 +70,12 @@ pub struct Asset {
     /// Capital expenditure records (資本的支出)
     #[serde(default)]
     pub capex_records: Vec<CapExRecord>,
+    /// Current department id
+    #[serde(default)]
+    pub department_id: Option<String>,
+    /// Department transfer history (配置転換履歴)
+    #[serde(default)]
+    pub transfers: Vec<TransferRecord>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -105,6 +120,8 @@ impl Asset {
             disposal_reason: None,
             impairments: Vec::new(),
             capex_records: Vec::new(),
+            department_id: None,
+            transfers: Vec::new(),
             created_at: now.clone(),
             updated_at: now,
         }

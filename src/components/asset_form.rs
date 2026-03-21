@@ -3,6 +3,7 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 use crate::i18n::use_i18n;
 use crate::models::asset::*;
+use crate::models::department::Department;
 use crate::models::depreciation;
 use crate::components::photo_uploader::PhotoGallery;
 
@@ -48,6 +49,12 @@ pub fn AssetForm(
     let tags = RwSignal::new(initial.as_ref().map(|a| a.tags.clone()).unwrap_or_default());
     let tag_input = RwSignal::new(String::new());
 
+    let departments = Department::load_all();
+    let has_departments = !departments.is_empty();
+    let department_id = RwSignal::new(
+        initial.as_ref().and_then(|a| a.department_id.clone()).unwrap_or_default()
+    );
+
     let initial_clone = initial.clone();
     let edit_asset_id = initial.as_ref().map(|a| a.id.clone());
 
@@ -78,10 +85,12 @@ pub fn AssetForm(
                     a.description = description.get();
                     a.status = AssetStatus::from_index(status.get());
                     a.tags = tags.get();
+                    let dept = department_id.get();
+                    a.department_id = if dept.is_empty() { None } else { Some(dept) };
                     a.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
                     a
                 } else {
-                    Asset::new(
+                    let mut a = Asset::new(
                         asset_number.get(),
                         name.get(),
                         Category::from_index(category.get()),
@@ -95,7 +104,10 @@ pub fn AssetForm(
                         location.get(),
                         description.get(),
                         tags.get(),
-                    )
+                    );
+                    let dept = department_id.get();
+                    a.department_id = if dept.is_empty() { None } else { Some(dept) };
+                    a
                 };
 
                 on_submit.run(asset);
@@ -327,6 +339,39 @@ pub fn AssetForm(
                     on:input=move |ev| location.set(event_target_value(&ev))
                 />
             </div>
+
+            // Department
+            {if has_departments {
+                let initial_dept = initial.as_ref().and_then(|a| a.department_id.clone()).unwrap_or_default();
+                let initial_dept2 = initial_dept.clone();
+                Some(view! {
+                    <div>
+                        <label class="label">{move || i18n.t("asset.department")}</label>
+                        <select
+                            class="input-field"
+                            on:change=move |ev| {
+                                department_id.set(event_target_value(&ev));
+                            }
+                        >
+                            <option value="" selected=move || initial_dept.is_empty()>{move || i18n.t("asset.dept_unassigned")}</option>
+                            {departments.clone().into_iter().map(|dept| {
+                                let dept_id = dept.id.clone();
+                                let is_selected = initial_dept2 == dept_id;
+                                let label = if dept.code.is_empty() {
+                                    dept.name.clone()
+                                } else {
+                                    format!("{} - {}", dept.code, dept.name)
+                                };
+                                view! {
+                                    <option value=dept_id selected=is_selected>{label}</option>
+                                }
+                            }).collect::<Vec<_>>()}
+                        </select>
+                    </div>
+                })
+            } else {
+                None
+            }}
 
             // Status (only show in edit mode)
             {if is_edit {

@@ -6,6 +6,8 @@ pub mod impairment_modal;
 pub mod impairment_info;
 pub mod capex_modal;
 pub mod capex_info;
+pub mod transfer_modal;
+pub mod transfer_info;
 
 pub use disposal_info::DisposalInfoSection;
 pub use dispose_modal::DisposeModal;
@@ -15,3 +17,5 @@ pub use impairment_modal::ImpairmentModal;
 pub use impairment_info::ImpairmentInfoSection;
 pub use capex_modal::CapExModal;
 pub use capex_info::CapExInfoSection;
+pub use transfer_modal::TransferDeptModal;
+pub use transfer_info::TransferInfoSection;
