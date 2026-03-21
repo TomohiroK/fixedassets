@@ -10,3 +10,4 @@ pub mod signup;
 pub mod admin;
 pub mod setup;
 pub mod terms;
+pub mod depreciation;

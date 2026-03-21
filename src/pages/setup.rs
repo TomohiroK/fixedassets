@@ -29,6 +29,7 @@ pub fn SetupPage() -> impl IntoView {
                     currency_code,
                 };
                 setup.save();
+                crate::stores::asset_store::mark_data_version_current();
                 // Go to dashboard
                 if let Some(window) = web_sys::window() {
                     let _ = window.location().set_href("/");

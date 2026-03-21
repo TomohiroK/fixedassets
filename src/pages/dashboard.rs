@@ -29,7 +29,31 @@ pub fn DashboardPage() -> impl IntoView {
                             }.into_any()
                         } else {
                             view! {
-                                <DashboardSummary assets=assets_vec />
+                                <div>
+                                    // Depreciation processing link
+                                    <a
+                                        href="/depreciation"
+                                        class="block mb-4 p-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl text-white active:opacity-90"
+                                    >
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <p class="font-bold text-sm">{move || i18n.t("dep_post.title")}</p>
+                                                    <p class="text-xs text-white/80">{move || i18n.t("dep_post.action_process")}</p>
+                                                </div>
+                                            </div>
+                                            <svg class="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                            </svg>
+                                        </div>
+                                    </a>
+                                    <DashboardSummary assets=assets_vec />
+                                </div>
                             }.into_any()
                         }
                     })

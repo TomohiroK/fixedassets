@@ -133,6 +133,7 @@ fn AdminPanel() -> impl IntoView {
                                 let email_for_login = user.email.clone();
                                 let name_for_login = user.name.clone();
                                 let paid_for_login = user.paid;
+                                let company_id_for_login = user.company_id.clone();
                                 let email_for_toggle = user.email.clone();
                                 let nav = navigate.clone();
                                 let plan_text = if paid {
@@ -150,7 +151,7 @@ fn AdminPanel() -> impl IntoView {
                                             <button
                                                 class="text-sm bg-blue-600 text-white px-3 py-2 rounded-lg active:bg-blue-700 transition-colors shrink-0"
                                                 on:click=move |_| {
-                                                    auth.login(email_for_login.clone(), name_for_login.clone(), paid_for_login);
+                                                    auth.login(email_for_login.clone(), name_for_login.clone(), paid_for_login, company_id_for_login.clone());
                                                     let nav = nav.clone();
                                                     nav("/", Default::default());
                                                 }
@@ -178,7 +179,7 @@ fn AdminPanel() -> impl IntoView {
                                                             if current.email == email_for_toggle {
                                                                 let new_users = get_all_stored_users();
                                                                 if let Some(u) = new_users.iter().find(|u| u.email == email_for_toggle) {
-                                                                    auth.login(u.email.clone(), u.name.clone(), u.paid);
+                                                                    auth.login(u.email.clone(), u.name.clone(), u.paid, u.company_id.clone());
                                                                 }
                                                             }
                                                         }

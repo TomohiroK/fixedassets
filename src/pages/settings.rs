@@ -122,14 +122,8 @@ pub fn SettingsPage() -> impl IntoView {
                             let cancel = i18n.t("asset.cancel");
                             c.show(&msg, ConfirmStyle::Warning, &ok_label, &cancel, move || {
                                 leptos::task::spawn_local(async move {
-                                    let _ = asset_store::clear_all_assets().await;
-                                    CompanySetup::clear();
+                                    asset_store::reset_all_data().await;
                                     if let Some(window) = web_sys::window() {
-                                        if let Ok(Some(storage)) = window.local_storage() {
-                                            let _ = storage.remove_item("fa_user");
-                                            let _ = storage.remove_item("fa_users");
-                                            let _ = storage.remove_item("fa_user_plans");
-                                        }
                                         let _ = window.location().set_href("/setup");
                                     }
                                 });
@@ -465,6 +459,7 @@ pub fn SettingsPage() -> impl IntoView {
 #[component]
 fn DepartmentMasterSection() -> impl IntoView {
     let i18n = use_i18n();
+    let auth = use_auth();
     let refresh = RwSignal::new(0u32);
     let new_code = RwSignal::new(String::new());
     let new_name = RwSignal::new(String::new());
@@ -473,13 +468,29 @@ fn DepartmentMasterSection() -> impl IntoView {
     let edit_code = RwSignal::new(String::new());
     let edit_name = RwSignal::new(String::new());
 
+    let is_paid = auth.is_paid();
+    let dept_limit_reached = move || {
+        if is_paid { return false; }
+        refresh.get(); // track changes
+        Department::load_all().len() >= 1
+    };
+
     view! {
         <div class="card mb-4">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="font-semibold text-gray-900">{move || i18n.t("settings.dept_title")}</h3>
                 <button
-                    class="text-sm text-indigo-600 font-medium flex items-center gap-1"
-                    on:click=move |_| show_add_form.update(|v| *v = !*v)
+                    class=move || if dept_limit_reached() {
+                        "text-sm text-gray-400 font-medium flex items-center gap-1 cursor-not-allowed"
+                    } else {
+                        "text-sm text-indigo-600 font-medium flex items-center gap-1"
+                    }
+                    disabled=dept_limit_reached
+                    on:click=move |_| {
+                        if !dept_limit_reached() {
+                            show_add_form.update(|v| *v = !*v);
+                        }
+                    }
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
@@ -487,6 +498,20 @@ fn DepartmentMasterSection() -> impl IntoView {
                     {move || i18n.t("settings.dept_add")}
                 </button>
             </div>
+
+            // Free plan limit notice
+            {move || if dept_limit_reached() {
+                view! {
+                    <div class="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {move || i18n.t("settings.dept_free_limit")}
+                    </div>
+                }.into_any()
+            } else {
+                view! { <span></span> }.into_any()
+            }}
 
             // Add form
             {move || if show_add_form.get() {

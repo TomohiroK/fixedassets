@@ -244,30 +244,43 @@ pub struct CompanySetup {
     pub currency_code: String,
 }
 
-const STORAGE_KEY: &str = "fa_company_setup";
+const STORAGE_KEY_PREFIX: &str = "fa_company_setup";
 
 impl CompanySetup {
+    /// Get the storage key scoped by company_id
+    fn storage_key() -> String {
+        let cid = crate::auth::get_current_company_id();
+        if cid.is_empty() {
+            STORAGE_KEY_PREFIX.to_string()
+        } else {
+            format!("{}_{}", STORAGE_KEY_PREFIX, cid)
+        }
+    }
+
     pub fn load() -> Option<Self> {
+        let key = Self::storage_key();
         let window = web_sys::window()?;
         let storage = window.local_storage().ok()??;
-        let json = storage.get_item(STORAGE_KEY).ok()??;
+        let json = storage.get_item(&key).ok()??;
         serde_json::from_str(&json).ok()
     }
 
     pub fn save(&self) {
+        let key = Self::storage_key();
         if let Some(window) = web_sys::window() {
             if let Ok(Some(storage)) = window.local_storage() {
                 if let Ok(json) = serde_json::to_string(self) {
-                    let _ = storage.set_item(STORAGE_KEY, &json);
+                    let _ = storage.set_item(&key, &json);
                 }
             }
         }
     }
 
     pub fn clear() {
+        let key = Self::storage_key();
         if let Some(window) = web_sys::window() {
             if let Ok(Some(storage)) = window.local_storage() {
-                let _ = storage.remove_item(STORAGE_KEY);
+                let _ = storage.remove_item(&key);
             }
         }
     }

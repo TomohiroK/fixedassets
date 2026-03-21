@@ -27,8 +27,11 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
     };
     let total_years_elapsed = prior_years_full + own_years;
 
-    let acc_dep = depreciation::accumulated_depreciation(&asset, total_years_elapsed);
-    let book_val = depreciation::current_book_value(&asset, total_years_elapsed);
+    // Use actual posted depreciation if any postings exist, otherwise use schedule-based calculation
+    let posted_dep = asset.total_posted_depreciation();
+    let schedule_dep = depreciation::accumulated_depreciation(&asset, total_years_elapsed);
+    let acc_dep = if posted_dep > rust_decimal::Decimal::ZERO { posted_dep } else { schedule_dep };
+    let book_val = asset.total_cost() - acc_dep - asset.total_impairment();
     let annual_expense = depreciation::current_year_expense(&asset, total_years_elapsed);
     let total_impairment = asset.total_impairment();
     let has_impairment = total_impairment > rust_decimal::Decimal::ZERO;

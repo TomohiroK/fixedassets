@@ -3,6 +3,7 @@ use crate::i18n::I18n;
 use crate::auth::AuthState;
 use crate::router::AppRouter;
 use crate::components::common::ConfirmDialogProvider;
+use crate::stores::asset_store;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -10,6 +11,17 @@ pub fn App() -> impl IntoView {
     let auth = AuthState::new();
     provide_context(i18n);
     provide_context(auth);
+
+    // Check data version — if mismatch, reset all data (acts as "server reset")
+    if asset_store::needs_data_reset() {
+        leptos::task::spawn_local(async move {
+            asset_store::reset_all_data().await;
+            // Redirect to setup page after reset
+            if let Some(window) = web_sys::window() {
+                let _ = window.location().set_href("/setup");
+            }
+        });
+    }
 
     // Periodic session timeout check (every 60 seconds)
     #[cfg(target_arch = "wasm32")]

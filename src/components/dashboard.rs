@@ -15,14 +15,19 @@ pub fn DashboardSummary(assets: Vec<Asset>) -> impl IntoView {
     let disposed_count = assets.iter().filter(|a| a.status == AssetStatus::Disposed).count();
 
     let total_book_value: Decimal = assets.iter().map(|a| {
-        let years = if let Some(acq) = a.acquisition_date_parsed() {
-            let today = chrono::Utc::now().date_naive();
-            let days = (today - acq).num_days();
-            (days as f64 / 365.25) as u32
+        let posted = a.total_posted_depreciation();
+        if posted > Decimal::ZERO {
+            a.total_cost() - posted - a.total_impairment()
         } else {
-            0
-        };
-        depreciation::current_book_value(a, years)
+            let years = if let Some(acq) = a.acquisition_date_parsed() {
+                let today = chrono::Utc::now().date_naive();
+                let days = (today - acq).num_days();
+                (days as f64 / 365.25) as u32
+            } else {
+                0
+            };
+            depreciation::current_book_value(a, years)
+        }
     }).sum();
 
     // Category breakdown

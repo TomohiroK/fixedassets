@@ -273,7 +273,8 @@
     "dept_add": "Add",
     "dept_empty": "No departments registered",
     "dept_code_placeholder": "Code (e.g. IT)",
-    "dept_name_placeholder": "Department name"
+    "dept_name_placeholder": "Department name",
+    "dept_free_limit": "Free plan allows up to 1 department"
   },
   "setup": {
     "title": "Initial Setup",
@@ -301,6 +302,37 @@
     "delete": "Delete",
     "add_photos": "Add Photos",
     "save_first": "Save the asset first, then you can add photos"
+  },
+  "dep_post": {
+    "title": "Depreciation Processing",
+    "period": "Processing Period",
+    "scope": "Scope",
+    "scope_all": "All Assets",
+    "scope_category": "By Category",
+    "scope_individual": "Individual",
+    "action_process": "Process This Month",
+    "action_cancel_month": "Cancel Previous Month",
+    "action_cancel_current": "Cancel This Month",
+    "today": "Today",
+    "processing_month": "Processing Month",
+    "month_names": "Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec",
+    "action_cancel_all": "Cancel All Postings",
+    "preview": "Preview",
+    "target_count": "Target Assets",
+    "total_amount": "Total Depreciation",
+    "already_posted": "Posted",
+    "skipped": "Skipped",
+    "no_targets": "No assets to process",
+    "no_targets_to_process": "No assets to process. Depreciation cannot start in this period, or all assets are already posted.",
+    "confirm_process": " assets will be processed. Continue?",
+    "confirm_cancel_month": " — Cancel postings for this period?",
+    "confirm_cancel_all": "Cancel ALL postings? This cannot be undone.",
+    "success_process": " assets processed successfully",
+    "success_cancel": " postings cancelled",
+    "select_asset": "Select asset...",
+    "posted_total": "Posted Depreciation",
+    "posting_history": "Posting History",
+    "no_postings": "No posting history"
   },
   "common": {
     "loading": "Loading...",

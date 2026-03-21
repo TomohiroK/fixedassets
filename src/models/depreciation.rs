@@ -1,6 +1,8 @@
+use chrono::NaiveDate;
+use chrono::Datelike;
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use super::asset::{Asset, Category, DepreciationMethod};
+use super::asset::{Asset, AssetStatus, Category, DepreciationMethod};
 use super::company::{AseanCountry, CompanySetup};
 use super::country_rules::CountryRules;
 
@@ -593,4 +595,97 @@ pub fn current_year_expense(asset: &Asset, years_elapsed: u32) -> Decimal {
         .find(|row| row.year >= target_year && row.expense > Decimal::ZERO)
         .map(|row| row.expense)
         .unwrap_or(Decimal::ZERO)
+}
+
+// ============================================================
+// Monthly depreciation posting (月次償却処理)
+// ============================================================
+
+/// Calculate the monthly depreciation amount for a specific (year, month).
+/// Returns ZERO if asset is non-depreciable, disposed, or the period is invalid.
+pub fn monthly_depreciation(asset: &Asset, year: u32, month: u32) -> Decimal {
+    use rust_decimal::prelude::*;
+
+    if is_non_depreciable(&asset.category) {
+        return Decimal::ZERO;
+    }
+    if asset.status == AssetStatus::Disposed {
+        // Check if disposed before target month
+        if let Some(ref d) = asset.disposal_date {
+            if let Ok(disp) = NaiveDate::parse_from_str(d, "%Y-%m-%d") {
+                let disp_ym = disp.year() as u32 * 12 + disp.month();
+                let target_ym = year * 12 + month;
+                if target_ym > disp_ym {
+                    return Decimal::ZERO;
+                }
+            }
+        }
+    }
+
+    let schedule = calculate_schedule(asset);
+    if schedule.is_empty() {
+        return Decimal::ZERO;
+    }
+
+    // Parse acquisition date
+    let acq_date = match NaiveDate::parse_from_str(&asset.acquisition_date, "%Y-%m-%d") {
+        Ok(d) => d,
+        Err(_) => return Decimal::ZERO,
+    };
+
+    // Effective depreciation start: acquisition month (Japanese convention: 取得月から)
+    let acq_ym = acq_date.year() as u32 * 12 + acq_date.month();
+    // Adjust for prior depreciation (already depreciated before acquisition by this system)
+    let prior_months = asset.prior_months_total();
+
+    let target_ym = year * 12 + month;
+
+    // Target month must be on or after acquisition month
+    if target_ym < acq_ym {
+        return Decimal::ZERO;
+    }
+
+    // Months elapsed since acquisition (0-based: acquisition month = 0)
+    let months_since_acq = target_ym - acq_ym;
+
+    // Total months into depreciation (including prior)
+    let total_dep_month = prior_months + months_since_acq;
+
+    // Which schedule year does this month fall into? (0-based year index)
+    let year_index = total_dep_month / 12;
+
+    // Find the matching schedule row
+    let row = match schedule.iter().find(|r| r.year == year_index + 1) {
+        Some(r) => r,
+        None => return Decimal::ZERO, // Beyond schedule (fully depreciated)
+    };
+
+    if row.expense == Decimal::ZERO {
+        return Decimal::ZERO;
+    }
+
+    // Month position within this schedule year (0-11)
+    let month_in_year = total_dep_month % 12;
+
+    // Monthly amount: divide annual by 12, last month gets remainder
+    let twelve = Decimal::from(12u32);
+    let monthly = (row.expense / twelve).floor();
+
+    if month_in_year == 11 {
+        // Last month of the year: assign remainder to avoid rounding drift
+        row.expense - monthly * Decimal::from(11u32)
+    } else {
+        monthly
+    }
+}
+
+/// Check if an asset is eligible for depreciation posting
+pub fn is_postable(asset: &Asset) -> bool {
+    if is_non_depreciable(&asset.category) {
+        return false;
+    }
+    if asset.status == AssetStatus::Disposed {
+        return false;
+    }
+    true
 }

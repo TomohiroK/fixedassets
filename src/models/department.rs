@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use crate::auth::get_current_company_id;
 
-const STORAGE_KEY: &str = "fa_departments";
+const STORAGE_KEY_PREFIX: &str = "fa_departments";
 
 /// Department master record
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -20,8 +21,19 @@ impl Department {
         }
     }
 
-    /// Load all departments from localStorage
+    /// Get the storage key scoped by company_id
+    fn storage_key() -> String {
+        let cid = get_current_company_id();
+        if cid.is_empty() {
+            STORAGE_KEY_PREFIX.to_string()
+        } else {
+            format!("{}_{}", STORAGE_KEY_PREFIX, cid)
+        }
+    }
+
+    /// Load all departments from localStorage (scoped by company)
     pub fn load_all() -> Vec<Department> {
+        let key = Self::storage_key();
         let window = match web_sys::window() {
             Some(w) => w,
             None => return vec![],
@@ -30,19 +42,20 @@ impl Department {
             Ok(Some(s)) => s,
             _ => return vec![],
         };
-        let json = match storage.get_item(STORAGE_KEY) {
+        let json = match storage.get_item(&key) {
             Ok(Some(j)) => j,
             _ => return vec![],
         };
         serde_json::from_str(&json).unwrap_or_default()
     }
 
-    /// Save all departments to localStorage
+    /// Save all departments to localStorage (scoped by company)
     pub fn save_all(departments: &[Department]) {
+        let key = Self::storage_key();
         if let Some(window) = web_sys::window() {
             if let Ok(Some(storage)) = window.local_storage() {
                 if let Ok(json) = serde_json::to_string(departments) {
-                    let _ = storage.set_item(STORAGE_KEY, &json);
+                    let _ = storage.set_item(&key, &json);
                 }
             }
         }

@@ -6,11 +6,78 @@ use web_sys::{IdbDatabase, IdbObjectStoreParameters, IdbTransactionMode, IdbRequ
 use js_sys::Array;
 
 use crate::models::asset::Asset;
+use crate::auth::get_current_company_id;
 
 const DB_NAME: &str = "fixedassets_db";
 const DB_VERSION: u32 = 2;
 const STORE_NAME: &str = "assets";
 const PHOTO_STORE: &str = "photos";
+
+/// Data schema version — bump this to force all clients to reset data on next load.
+/// This acts as a "server reset" mechanism for a client-side app.
+pub const DATA_VERSION: u32 = 1;
+const DATA_VERSION_KEY: &str = "fa_data_version";
+
+/// Check if the client's data version matches the current app version.
+/// Returns true if data needs to be reset (version mismatch or first run).
+pub fn needs_data_reset() -> bool {
+    let window = match web_sys::window() {
+        Some(w) => w,
+        None => return false,
+    };
+    let storage = match window.local_storage() {
+        Ok(Some(s)) => s,
+        _ => return false,
+    };
+    let stored: u32 = storage
+        .get_item(DATA_VERSION_KEY)
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+    stored != DATA_VERSION
+}
+
+/// Delete the entire IndexedDB database and clear all fa_* localStorage keys.
+/// Called when DATA_VERSION changes (i.e. a "server reset").
+pub async fn reset_all_data() {
+    // 1. Delete IndexedDB
+    if let Some(window) = web_sys::window() {
+        if let Ok(Some(idb_factory)) = window.indexed_db() {
+            let _ = idb_factory.delete_database(DB_NAME);
+        }
+    }
+
+    // 2. Clear all fa_* localStorage keys (except fa_users which holds account info)
+    if let Some(window) = web_sys::window() {
+        if let Ok(Some(storage)) = window.local_storage() {
+            let mut keys_to_remove = Vec::new();
+            let len = storage.length().unwrap_or(0);
+            for i in 0..len {
+                if let Ok(Some(key)) = storage.key(i) {
+                    if key.starts_with("fa_") && key != "fa_users" && key != "fa_user" && key != "fa_login_attempts" && key != "fa_locale" {
+                        keys_to_remove.push(key);
+                    }
+                }
+            }
+            for key in keys_to_remove {
+                let _ = storage.remove_item(&key);
+            }
+
+            // 3. Update stored version
+            let _ = storage.set_item(DATA_VERSION_KEY, &DATA_VERSION.to_string());
+        }
+    }
+}
+
+/// Mark current data version as up-to-date (called after setup completes without reset)
+pub fn mark_data_version_current() {
+    if let Some(window) = web_sys::window() {
+        if let Ok(Some(storage)) = window.local_storage() {
+            let _ = storage.set_item(DATA_VERSION_KEY, &DATA_VERSION.to_string());
+        }
+    }
+}
 
 fn has_store(db: &IdbDatabase, name: &str) -> bool {
     let list = db.object_store_names();
@@ -131,7 +198,13 @@ pub async fn save_asset(asset: &Asset) -> Result<(), String> {
         .object_store(STORE_NAME)
         .map_err(|e| format!("Store error: {:?}", e))?;
 
-    let json = serde_json::to_string(asset).map_err(|e| format!("Serialize error: {}", e))?;
+    // Ensure company_id is set
+    let mut asset = asset.clone();
+    if asset.company_id.is_empty() {
+        asset.company_id = get_current_company_id();
+    }
+
+    let json = serde_json::to_string(&asset).map_err(|e| format!("Serialize error: {}", e))?;
     let js_value = js_sys::JSON::parse(&json).map_err(|e| format!("JSON parse error: {:?}", e))?;
 
     let request = store
@@ -174,6 +247,13 @@ pub async fn get_all_assets() -> Result<Vec<Asset>, String> {
     }
 
     assets.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+    // Filter by current company_id
+    let cid = get_current_company_id();
+    if !cid.is_empty() {
+        assets.retain(|a| a.company_id.is_empty() || a.company_id == cid);
+    }
+
     Ok(assets)
 }
 
@@ -224,20 +304,11 @@ pub async fn delete_asset(id: &str) -> Result<(), String> {
 }
 
 pub async fn clear_all_assets() -> Result<(), String> {
-    let db = open_db().await?;
-    let transaction = db
-        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readwrite)
-        .map_err(|e| format!("Transaction error: {:?}", e))?;
-    let store = transaction
-        .object_store(STORE_NAME)
-        .map_err(|e| format!("Store error: {:?}", e))?;
-
-    let request = store
-        .clear()
-        .map_err(|e| format!("Clear error: {:?}", e))?;
-
-    let rx = idb_request_to_future(&request);
-    rx.await.map_err(|_| "Channel error".to_string())??;
+    // Only delete assets belonging to the current company
+    let assets = get_all_assets().await?;
+    for asset in &assets {
+        delete_asset(&asset.id).await?;
+    }
     Ok(())
 }
 

@@ -19,6 +19,15 @@ pub struct CapExRecord {
     pub description: String,    // What was added/improved
 }
 
+/// Record of a monthly depreciation posting (月次償却仕訳)
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct DepreciationPosting {
+    pub year: u32,          // Calendar year (e.g. 2026)
+    pub month: u32,         // Month 1-12
+    pub amount: Decimal,    // Monthly depreciation amount posted
+    pub posted_at: String,  // ISO timestamp when the posting was created
+}
+
 /// Record of an asset transfer between departments (配置転換)
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct TransferRecord {
@@ -76,6 +85,12 @@ pub struct Asset {
     /// Department transfer history (配置転換履歴)
     #[serde(default)]
     pub transfers: Vec<TransferRecord>,
+    /// Depreciation posting history (月次償却仕訳履歴)
+    #[serde(default)]
+    pub postings: Vec<DepreciationPosting>,
+    /// Company ID for multi-tenant isolation
+    #[serde(default)]
+    pub company_id: String,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -122,6 +137,8 @@ impl Asset {
             capex_records: Vec::new(),
             department_id: None,
             transfers: Vec::new(),
+            postings: Vec::new(),
+            company_id: String::new(),
             created_at: now.clone(),
             updated_at: now,
         }
@@ -145,6 +162,23 @@ impl Asset {
     /// Total cost including CapEx (used for depreciation calculation)
     pub fn total_cost(&self) -> Decimal {
         self.cost + self.total_capex()
+    }
+
+    /// Total posted (accumulated) depreciation from actual postings
+    pub fn total_posted_depreciation(&self) -> Decimal {
+        self.postings.iter().map(|p| p.amount).sum()
+    }
+
+    /// Check if a posting exists for the given period
+    pub fn has_posting(&self, year: u32, month: u32) -> bool {
+        self.postings.iter().any(|p| p.year == year && p.month == month)
+    }
+
+    /// Get the latest posting period (year, month)
+    pub fn latest_posting(&self) -> Option<(u32, u32)> {
+        self.postings.iter()
+            .max_by_key(|p| p.year * 100 + p.month)
+            .map(|p| (p.year, p.month))
     }
 
     pub fn acquisition_date_parsed(&self) -> Option<NaiveDate> {

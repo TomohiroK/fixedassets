@@ -19,6 +19,7 @@ use crate::pages::{
     admin::AdminPage,
     setup::SetupPage,
     terms::TermsPage,
+    depreciation::DepreciationPage,
 };
 
 #[component]
@@ -53,6 +54,7 @@ pub fn AppRouter() -> impl IntoView {
                 <Route path=path!("/register") view=GuardedRegister />
                 <Route path=path!("/assets/:id") view=GuardedDetail />
                 <Route path=path!("/settings") view=GuardedSettings />
+                <Route path=path!("/depreciation") view=GuardedDepreciation />
             </Routes>
         </Router>
     }
@@ -140,6 +142,20 @@ fn GuardedDetail() -> impl IntoView {
             view! { <SetupPage /> }.into_any()
         } else {
             view! { <PageShell><AssetDetailPage /></PageShell> }.into_any()
+        }}
+    }
+}
+
+#[component]
+fn GuardedDepreciation() -> impl IntoView {
+    let auth = use_auth();
+    view! {
+        {move || if !auth.is_logged_in() {
+            view! { <LandingPage /> }.into_any()
+        } else if needs_setup() {
+            view! { <SetupPage /> }.into_any()
+        } else {
+            view! { <PageShell><DepreciationPage /></PageShell> }.into_any()
         }}
     }
 }

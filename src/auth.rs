@@ -15,6 +15,8 @@ pub struct User {
     pub name: String,
     #[serde(default)]
     pub paid: bool,
+    #[serde(default)]
+    pub company_id: String,
 }
 
 // ─── Stored User (hashed password) ──────────────────────────────────
@@ -28,6 +30,8 @@ pub struct StoredUser {
     pub salt: String,
     #[serde(default)]
     pub paid: bool,
+    #[serde(default)]
+    pub company_id: String,
     // Legacy field — consumed on first login, then removed
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
@@ -107,10 +111,14 @@ impl AuthState {
         self.user.get().is_some()
     }
 
-    pub fn login(&self, email: String, name: String, paid: bool) {
-        let user = User { email, name, paid };
+    pub fn login(&self, email: String, name: String, paid: bool, company_id: String) {
+        let user = User { email, name, paid, company_id };
         save_session(&user);
         self.user.set(Some(user));
+    }
+
+    pub fn current_company_id(&self) -> String {
+        self.user.get().map(|u| u.company_id.clone()).unwrap_or_default()
     }
 
     pub fn is_paid(&self) -> bool {
@@ -130,6 +138,7 @@ impl AuthState {
 
         let salt = generate_salt();
         let password_hash = hash_password(&password, &salt);
+        let company_id = uuid::Uuid::new_v4().to_string();
 
         users.push(StoredUser {
             email: email.clone(),
@@ -137,13 +146,14 @@ impl AuthState {
             password_hash,
             salt,
             paid: false,
+            company_id: company_id.clone(),
             password: None,
         });
 
         let json = serde_json::to_string(&users).unwrap_or_default();
         store_string("fa_users", &json);
 
-        self.login(email, name, false);
+        self.login(email, name, false, company_id);
         Ok(())
     }
 
@@ -170,7 +180,7 @@ impl AuthState {
 
                 if valid {
                     reset_login_attempts();
-                    self.login(u.email.clone(), u.name.clone(), u.paid);
+                    self.login(u.email.clone(), u.name.clone(), u.paid, u.company_id.clone());
                     Ok(())
                 } else {
                     record_failed_attempt();
@@ -343,6 +353,7 @@ fn seed_demo_accounts() {
                 password_hash,
                 salt,
                 paid: false,
+                company_id: uuid::Uuid::new_v4().to_string(),
                 password: None,
             }
         })
@@ -369,6 +380,12 @@ fn migrate_legacy_passwords() {
     let mut changed = false;
 
     for user in users.iter_mut() {
+        // Migrate missing company_id
+        if user.company_id.is_empty() {
+            user.company_id = uuid::Uuid::new_v4().to_string();
+            changed = true;
+        }
+
         let needs_migration = user.password.is_some()
             || user.password_hash.is_empty()
             || user.salt.is_empty();
@@ -459,6 +476,11 @@ pub fn verify_admin_password(admin_email: &str, password: &str) -> bool {
 
 pub fn use_auth() -> AuthState {
     expect_context::<AuthState>()
+}
+
+/// Get current company_id from session (for use in stores without AuthState context)
+pub fn get_current_company_id() -> String {
+    load_session().map(|u| u.company_id).unwrap_or_default()
 }
 
 // ─── localStorage helpers ───────────────────────────────────────────
