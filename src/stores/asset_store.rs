@@ -405,28 +405,42 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
                 }).map(|d| d.id)
             });
 
-        let mut asset = Asset::new(
-            asset_number,
-            name,
-            category,
-            acquisition_date,
-            cost,
-            salvage_value,
-            useful_life,
-            depreciation_method,
-            prior_years,
-            prior_months,
-            location,
-            description,
-            tags,
-        );
-        asset.status = status;
-        asset.department_id = department_id;
+        // Column 15: quantity (default 1)
+        let qty: u32 = fields.get(15)
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1)
+            .max(1)
+            .min(100);
 
-        save_asset(&asset).await?;
-        count += 1;
-        if count > MAX_IMPORT_ASSETS {
-            return Err(format!("Too many rows. Maximum {} assets per import.", MAX_IMPORT_ASSETS));
+        for i in 0..qty {
+            let num = if qty == 1 {
+                asset_number.clone()
+            } else {
+                generate_sequential_number(&asset_number, i)
+            };
+            let mut asset = Asset::new(
+                num,
+                name.clone(),
+                category.clone(),
+                acquisition_date.clone(),
+                cost,
+                salvage_value,
+                useful_life,
+                depreciation_method.clone(),
+                prior_years,
+                prior_months,
+                location.clone(),
+                description.clone(),
+                tags.clone(),
+            );
+            asset.status = status.clone();
+            asset.department_id = department_id.clone();
+
+            save_asset(&asset).await?;
+            count += 1;
+            if count > MAX_IMPORT_ASSETS {
+                return Err(format!("Too many rows. Maximum {} assets per import.", MAX_IMPORT_ASSETS));
+            }
         }
     }
 
@@ -494,10 +508,11 @@ fn parse_status(s: &str) -> AssetStatus {
 
 /// Generate CSV template string
 pub fn csv_template() -> String {
-    "asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department\n\
-     FA-001,Office Desk,ToolsFixtures,2024-04-01,50000,1,8,SL,Tokyo Office,Executive desk,0,0,InUse,office;furniture,SALES\n\
-     FA-002,Delivery Van,Vehicles,2023-10-15,2500000,1,6,DB,Warehouse,Toyota HiAce,1,3,InUse,vehicle;delivery,\n\
-     FA-003,Accounting Software,Software,2024-01-01,300000,0,5,SL,,Cloud license,0,0,InUse,software;accounting,IT\n".to_string()
+    "asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department,quantity\n\
+     FA-001,Office Desk,ToolsFixtures,2024-04-01,50000,1,8,SL,Tokyo Office,Executive desk,0,0,InUse,office;furniture,SALES,1\n\
+     FA-010,Folding Chair,ToolsFixtures,2024-04-01,8000,1,8,SL,Tokyo Office,Meeting room chairs,0,0,InUse,office;furniture,SALES,5\n\
+     FA-020,Delivery Van,Vehicles,2023-10-15,2500000,1,6,DB,Warehouse,Toyota HiAce,1,3,InUse,vehicle;delivery,,1\n\
+     FA-030,Accounting Software,Software,2024-01-01,300000,0,5,SL,,Cloud license,0,0,InUse,software;accounting,IT,1\n".to_string()
 }
 
 /// Generate JSON template string
@@ -581,6 +596,27 @@ pub async fn export_all_assets_csv() -> Result<String, String> {
     }
 
     Ok(csv)
+}
+
+/// Generate sequential asset numbers for bulk import.
+fn generate_sequential_number(base: &str, offset: u32) -> String {
+    if base.is_empty() {
+        return String::new();
+    }
+    let num_start = base.rfind(|c: char| !c.is_ascii_digit()).map(|i| i + 1).unwrap_or(0);
+    if num_start < base.len() && num_start > 0 {
+        let prefix = &base[..num_start];
+        let num_str = &base[num_start..];
+        let width = num_str.len();
+        let num: u32 = num_str.parse().unwrap_or(0);
+        format!("{}{:0>width$}", prefix, num + offset, width = width)
+    } else if num_start == 0 && base.chars().all(|c| c.is_ascii_digit()) {
+        let width = base.len();
+        let num: u32 = base.parse().unwrap_or(0);
+        format!("{:0>width$}", num + offset, width = width)
+    } else {
+        format!("{}-{}", base, offset + 1)
+    }
 }
 
 fn csv_escape(s: &str) -> String {

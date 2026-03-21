@@ -201,7 +201,9 @@
     "transfer_dept_reason": "理由",
     "transfer_dept_reason_hint": "例：組織改編、事務所移転、部署統合",
     "transfer_dept_execute": "移動を実行",
-    "transfer_history": "移動履歴"
+    "transfer_history": "移動履歴",
+    "quantity": "数量",
+    "quantity_hint": "同じ資産を複数個まとめて登録します"
   },
   "category": {
     "land": "土地",
@@ -250,7 +252,7 @@
     "template_hint": "サンプルデータ付きテンプレートをダウンロード。資産を記入してインポートしてください。",
     "template_downloaded": "テンプレートをダウンロードしました",
     "format_reference": "カラム形式リファレンス",
-    "csv_columns": "CSVカラム（15列）:",
+    "csv_columns": "CSVカラム（16列）:",
     "col_asset_number": "任意のID（例: FA-001）",
     "col_name": "必須: 資産名",
     "col_category": "下記カテゴリ一覧参照",
@@ -263,6 +265,7 @@
     "col_prior_months": "償却済み月数（0〜11）",
     "col_tags": "セミコロン区切り（例: office;furniture）",
     "col_department": "部門コードまたは名前（任意）",
+    "col_quantity": "数量（デフォルト1、最大100）",
     "category_values": "カテゴリ値（英語または日本語）:",
     "category_ja_hint": "日本語カテゴリ名も使用可: 土地, 建物, 建物付属設備, 構築物, 機械装置, 工具器具備品, 車両運搬具, リース資産, 建設仮勘定, 特許権, 商標権, 借地権, ソフトウエア, 施設利用権, のれん, その他",
     "terms": "利用規約",

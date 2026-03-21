@@ -7,10 +7,40 @@ use crate::models::department::Department;
 use crate::models::depreciation;
 use crate::components::photo_uploader::PhotoGallery;
 
+/// Generate sequential asset numbers.
+/// "FA-001" + offset 0 → "FA-001", offset 1 → "FA-002", offset 2 → "FA-003"
+/// "DESK" + offset 0 → "DESK-1", offset 1 → "DESK-2"
+/// "" + offset → ""
+fn generate_sequential_number(base: &str, offset: u32) -> String {
+    if base.is_empty() {
+        return String::new();
+    }
+
+    // Find trailing digits
+    let num_start = base.rfind(|c: char| !c.is_ascii_digit()).map(|i| i + 1).unwrap_or(0);
+
+    if num_start < base.len() && num_start > 0 {
+        // Has trailing digits: "FA-001" → prefix="FA-", num_str="001"
+        let prefix = &base[..num_start];
+        let num_str = &base[num_start..];
+        let width = num_str.len();
+        let num: u32 = num_str.parse().unwrap_or(0);
+        format!("{}{:0>width$}", prefix, num + offset, width = width)
+    } else if num_start == 0 && base.chars().all(|c| c.is_ascii_digit()) {
+        // All digits: "001" → "002"
+        let width = base.len();
+        let num: u32 = base.parse().unwrap_or(0);
+        format!("{:0>width$}", num + offset, width = width)
+    } else {
+        // No trailing digits: "DESK" → "DESK-1", "DESK-2"
+        format!("{}-{}", base, offset + 1)
+    }
+}
+
 #[component]
 pub fn AssetForm(
     #[prop(optional, into)] initial: Option<Asset>,
-    on_submit: Callback<Asset>,
+    on_submit: Callback<Vec<Asset>>,
     #[prop(into)] submit_label: Signal<String>,
 ) -> impl IntoView {
     let i18n = use_i18n();
@@ -49,6 +79,8 @@ pub fn AssetForm(
     let tags = RwSignal::new(initial.as_ref().map(|a| a.tags.clone()).unwrap_or_default());
     let tag_input = RwSignal::new(String::new());
 
+    let quantity = RwSignal::new(1u32);
+
     let departments = Department::load_all();
     let has_departments = !departments.is_empty();
     let department_id = RwSignal::new(
@@ -61,7 +93,7 @@ pub fn AssetForm(
     view! {
         <form
             class="space-y-4"
-            on:submit=move |ev| {
+            on:submit=move |ev: web_sys::SubmitEvent| {
                 ev.prevent_default();
                 let cost_val = Decimal::from_str(&cost.get()).unwrap_or(Decimal::ZERO);
                 let salvage_val = Decimal::from_str(&salvage_value.get()).unwrap_or(Decimal::ZERO);
@@ -69,7 +101,8 @@ pub fn AssetForm(
                 let prior_y = prior_years.get().parse::<u32>().unwrap_or(0);
                 let prior_m = prior_months.get().parse::<u32>().unwrap_or(0);
 
-                let asset = if let Some(ref existing) = initial_clone {
+                let assets = if let Some(ref existing) = initial_clone {
+                    // Edit mode: single asset
                     let mut a = existing.clone();
                     a.asset_number = asset_number.get();
                     a.name = name.get();
@@ -88,29 +121,48 @@ pub fn AssetForm(
                     let dept = department_id.get();
                     a.department_id = if dept.is_empty() { None } else { Some(dept) };
                     a.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
-                    a
+                    vec![a]
                 } else {
-                    let mut a = Asset::new(
-                        asset_number.get(),
-                        name.get(),
-                        Category::from_index(category.get()),
-                        acquisition_date.get(),
-                        cost_val,
-                        salvage_val,
-                        life_val,
-                        DepreciationMethod::from_index(depreciation_method.get()),
-                        prior_y,
-                        prior_m,
-                        location.get(),
-                        description.get(),
-                        tags.get(),
-                    );
+                    // New mode: create N assets
+                    let qty = quantity.get().max(1);
+                    let base_number = asset_number.get();
+                    let name_val = name.get();
+                    let cat = Category::from_index(category.get());
+                    let acq_date = acquisition_date.get();
+                    let method = DepreciationMethod::from_index(depreciation_method.get());
+                    let loc = location.get();
+                    let desc = description.get();
+                    let tags_val = tags.get();
                     let dept = department_id.get();
-                    a.department_id = if dept.is_empty() { None } else { Some(dept) };
-                    a
+                    let dept_id = if dept.is_empty() { None } else { Some(dept) };
+
+                    (0..qty).map(|i| {
+                        let num = if qty == 1 {
+                            base_number.clone()
+                        } else {
+                            generate_sequential_number(&base_number, i)
+                        };
+                        let mut a = Asset::new(
+                            num,
+                            name_val.clone(),
+                            cat.clone(),
+                            acq_date.clone(),
+                            cost_val,
+                            salvage_val,
+                            life_val,
+                            method.clone(),
+                            prior_y,
+                            prior_m,
+                            loc.clone(),
+                            desc.clone(),
+                            tags_val.clone(),
+                        );
+                        a.department_id = dept_id.clone();
+                        a
+                    }).collect()
                 };
 
-                on_submit.run(asset);
+                on_submit.run(assets);
             }
         >
             // Asset Number (optional)
@@ -124,6 +176,76 @@ pub fn AssetForm(
                     on:input=move |ev| asset_number.set(event_target_value(&ev))
                 />
             </div>
+
+            // Quantity (only for new registration)
+            {if !is_edit {
+                let on_dec = move |_: web_sys::MouseEvent| {
+                    quantity.update(|q| {
+                        if *q > 1 { *q -= 1; }
+                    });
+                };
+                let on_inc = move |_: web_sys::MouseEvent| {
+                    quantity.update(|q| {
+                        if *q < 100 { *q += 1; }
+                    });
+                };
+                let on_qty_input = move |ev: web_sys::Event| {
+                    let v: u32 = event_target_value(&ev).parse().unwrap_or(1);
+                    quantity.set(v.max(1).min(100));
+                };
+                let is_min = move || quantity.get() <= 1;
+                let is_max = move || quantity.get() == 100;
+                Some(view! {
+                    <div>
+                        <label class="label">{move || i18n.t("asset.quantity")}</label>
+                        <div class="flex items-center gap-3">
+                            <button
+                                type="button"
+                                class="w-10 h-10 rounded-lg border border-gray-300 text-gray-600 font-bold text-lg flex items-center justify-center active:bg-gray-100 disabled:opacity-30"
+                                disabled=is_min
+                                on:click=on_dec
+                            >{"\u{2212}"}</button>
+                            <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                class="input-field w-20 text-center font-bold"
+                                prop:value=move || quantity.get().to_string()
+                                on:input=on_qty_input
+                            />
+                            <button
+                                type="button"
+                                class="w-10 h-10 rounded-lg border border-gray-300 text-gray-600 font-bold text-lg flex items-center justify-center active:bg-gray-100 disabled:opacity-30"
+                                disabled=is_max
+                                on:click=on_inc
+                            >{"\u{FF0B}"}</button>
+                        </div>
+                        {move || {
+                            let qty = quantity.get();
+                            let base = asset_number.get();
+                            if qty > 1 && !base.is_empty() {
+                                let first = generate_sequential_number(&base, 0);
+                                let last = generate_sequential_number(&base, qty - 1);
+                                view! {
+                                    <p class="text-xs text-blue-500 mt-1">
+                                        {format!("{} → {}", first, last)}
+                                    </p>
+                                }.into_any()
+                            } else if qty > 1 {
+                                view! {
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        {move || i18n.t("asset.quantity_hint")}
+                                    </p>
+                                }.into_any()
+                            } else {
+                                view! { <span></span> }.into_any()
+                            }
+                        }}
+                    </div>
+                })
+            } else {
+                None
+            }}
 
             // Asset Name
             <div>
@@ -511,7 +633,17 @@ pub fn AssetForm(
 
             // Submit
             <div class="pt-2">
-                <button type="submit" class="btn-primary">{submit_label}</button>
+                <button type="submit" class="btn-primary">
+                    {move || {
+                        let qty = quantity.get();
+                        let label = submit_label.get();
+                        if qty > 1 && !is_edit {
+                            format!("{} (×{})", label, qty)
+                        } else {
+                            label
+                        }
+                    }}
+                </button>
             </div>
         </form>
     }

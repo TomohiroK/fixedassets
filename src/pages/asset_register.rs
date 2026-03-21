@@ -22,17 +22,19 @@ pub fn AssetRegisterPage() -> impl IntoView {
         }
     });
 
-    let on_submit = Callback::new(move |asset| {
+    let on_submit = Callback::new(move |assets: Vec<crate::models::asset::Asset>| {
         let navigate = navigate.clone();
         leptos::task::spawn_local(async move {
-            match asset_store::save_asset(&asset).await {
-                Ok(()) => {
-                    navigate("/assets", Default::default());
-                }
-                Err(e) => {
-                    log::error!("Failed to save asset: {}", e);
+            for asset in &assets {
+                match asset_store::save_asset(asset).await {
+                    Ok(()) => {},
+                    Err(e) => {
+                        log::error!("Failed to save asset: {}", e);
+                        return;
+                    }
                 }
             }
+            navigate("/assets", Default::default());
         });
     });
 

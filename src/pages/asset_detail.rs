@@ -69,14 +69,17 @@ pub fn AssetDetailPage() -> impl IntoView {
                                         {move || {
                                             if is_editing.get() {
                                                 let on_submit = {
-                                                    Callback::new(move |updated_asset| {
+                                                    Callback::new(move |assets: Vec<crate::models::asset::Asset>| {
                                                         leptos::task::spawn_local(async move {
-                                                            match asset_store::save_asset(&updated_asset).await {
-                                                                Ok(()) => {
-                                                                    is_editing.set(false);
-                                                                    refresh_trigger.update(|v| *v += 1);
+                                                            // Edit mode always sends a single asset
+                                                            if let Some(updated_asset) = assets.into_iter().next() {
+                                                                match asset_store::save_asset(&updated_asset).await {
+                                                                    Ok(()) => {
+                                                                        is_editing.set(false);
+                                                                        refresh_trigger.update(|v| *v += 1);
+                                                                    }
+                                                                    Err(e) => log::error!("Save error: {}", e),
                                                                 }
-                                                                Err(e) => log::error!("Save error: {}", e),
                                                             }
                                                         });
                                                     })
