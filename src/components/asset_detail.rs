@@ -29,12 +29,15 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
     let acc_dep = depreciation::accumulated_depreciation(&asset, total_years_elapsed);
     let book_val = depreciation::current_book_value(&asset, total_years_elapsed);
     let annual_expense = depreciation::current_year_expense(&asset, total_years_elapsed);
+    let total_impairment = asset.total_impairment();
+    let has_impairment = total_impairment > rust_decimal::Decimal::ZERO;
 
     let cost_str = format_currency(&asset.cost);
     let book_val_str = format_currency(&book_val);
     let acc_dep_str = format_currency(&acc_dep);
     let salvage_str = format_currency(&asset.salvage_value);
     let annual_expense_str = format_currency(&annual_expense);
+    let impairment_str = format_currency(&total_impairment);
     let depreciation_done = annual_expense == rust_decimal::Decimal::ZERO;
     let acq_date = asset.acquisition_date.clone();
     let useful_life_str = format!("{}{}", asset.useful_life, i18n.t("asset.years"));
@@ -159,6 +162,12 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                         <div class="pb-3 space-y-2 border-t border-gray-100 pt-2">
                             <CompactRow label=Signal::derive(move || i18n.t("asset.cost")) value=cost_str.clone() />
                             <CompactRow label=Signal::derive(move || i18n.t("asset.accumulated_depreciation")) value=acc_dep_str.clone() />
+                            {if has_impairment {
+                                let imp_str = impairment_str.clone();
+                                Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.impairment_total")) value=format!("-{}", imp_str) /> })
+                            } else {
+                                None
+                            }}
                             <CompactRow label=Signal::derive(move || i18n.t("asset.book_value")) value=book_val_str.clone() />
                             <CompactRow label=Signal::derive(move || i18n.t("asset.salvage_value")) value=salvage_str.clone() />
                         </div>

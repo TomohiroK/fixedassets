@@ -563,7 +563,7 @@ pub fn accumulated_depreciation(asset: &Asset, years_elapsed: u32) -> Decimal {
 }
 
 pub fn current_book_value(asset: &Asset, years_elapsed: u32) -> Decimal {
-    asset.cost - accumulated_depreciation(asset, years_elapsed)
+    (asset.cost - accumulated_depreciation(asset, years_elapsed) - asset.total_impairment()).max(Decimal::ZERO)
 }
 
 /// Returns the depreciation expense for the current/next un-depreciated year

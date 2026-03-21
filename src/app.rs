@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use crate::i18n::I18n;
 use crate::auth::AuthState;
 use crate::router::AppRouter;
+use crate::components::common::ConfirmDialogProvider;
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -45,6 +46,8 @@ pub fn App() -> impl IntoView {
     }
 
     view! {
-        <AppRouter />
+        <ConfirmDialogProvider>
+            <AppRouter />
+        </ConfirmDialogProvider>
     }
 }

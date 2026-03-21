@@ -3,6 +3,14 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// Record of a single impairment event
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ImpairmentRecord {
+    pub date: String,       // YYYY-MM-DD
+    pub amount: Decimal,    // Impairment loss amount
+    pub reason: String,     // Reason for impairment
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Asset {
     pub id: String,
@@ -24,6 +32,21 @@ pub struct Asset {
     pub status: AssetStatus,
     #[serde(default)]
     pub tags: Vec<String>,
+    /// "disposal" or "sale" — distinguishes 除却 from 売却
+    #[serde(default)]
+    pub disposal_type: Option<String>,
+    /// Disposal/sale date (YYYY-MM-DD)
+    #[serde(default)]
+    pub disposal_date: Option<String>,
+    /// Proceeds — sale price for 売却, scrap value for 除却
+    #[serde(default)]
+    pub disposal_proceeds: Option<Decimal>,
+    /// Reason/note for disposal, or buyer name for sale
+    #[serde(default)]
+    pub disposal_reason: Option<String>,
+    /// Impairment loss records
+    #[serde(default)]
+    pub impairments: Vec<ImpairmentRecord>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -61,6 +84,11 @@ impl Asset {
             description,
             status: AssetStatus::InUse,
             tags,
+            disposal_type: None,
+            disposal_date: None,
+            disposal_proceeds: None,
+            disposal_reason: None,
+            impairments: Vec::new(),
             created_at: now.clone(),
             updated_at: now,
         }
@@ -69,6 +97,11 @@ impl Asset {
     /// Total prior depreciation in months
     pub fn prior_months_total(&self) -> u32 {
         self.prior_depreciation_years * 12 + self.prior_depreciation_months
+    }
+
+    /// Total cumulative impairment loss
+    pub fn total_impairment(&self) -> Decimal {
+        self.impairments.iter().map(|r| r.amount).sum()
     }
 
     pub fn acquisition_date_parsed(&self) -> Option<NaiveDate> {

@@ -5,3 +5,4 @@ pub mod asset_detail;
 pub mod dashboard;
 pub mod common;
 pub mod photo_uploader;
+pub mod modals;

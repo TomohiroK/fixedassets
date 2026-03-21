@@ -4,10 +4,12 @@ use crate::i18n::use_i18n;
 use crate::auth::use_auth;
 use crate::stores::asset_store;
 use crate::models::company::CompanySetup;
+use crate::components::common::{use_confirm, ConfirmStyle};
 
 #[component]
 pub fn SettingsPage() -> impl IntoView {
     let i18n = use_i18n();
+    let confirm = use_confirm();
     let auth = use_auth();
     let navigate = use_navigate();
     let status_message = RwSignal::new(Option::<String>::None);
@@ -111,23 +113,25 @@ pub fn SettingsPage() -> impl IntoView {
                 </div>
                 <button
                     class="w-full mt-4 py-2.5 text-sm text-orange-600 font-medium border border-orange-200 rounded-lg active:bg-orange-50"
-                    on:click=move |_| {
-                        let msg = i18n.t("setup.change_country_warning");
-                        let window = web_sys::window().unwrap();
-                        if window.confirm_with_message(&msg).unwrap_or(false) {
-                            // Clear all data
-                            leptos::task::spawn_local(async move {
-                                let _ = asset_store::clear_all_assets().await;
-                                CompanySetup::clear();
-                                // Clear auth
-                                if let Some(window) = web_sys::window() {
-                                    if let Ok(Some(storage)) = window.local_storage() {
-                                        let _ = storage.remove_item("fa_user");
-                                        let _ = storage.remove_item("fa_users");
-                                        let _ = storage.remove_item("fa_user_plans");
+                    on:click={
+                        let c = confirm.clone();
+                        move |_| {
+                            let msg = i18n.t("setup.change_country_warning");
+                            let ok_label = i18n.t("setup.change_country");
+                            let cancel = i18n.t("asset.cancel");
+                            c.show(&msg, ConfirmStyle::Warning, &ok_label, &cancel, move || {
+                                leptos::task::spawn_local(async move {
+                                    let _ = asset_store::clear_all_assets().await;
+                                    CompanySetup::clear();
+                                    if let Some(window) = web_sys::window() {
+                                        if let Ok(Some(storage)) = window.local_storage() {
+                                            let _ = storage.remove_item("fa_user");
+                                            let _ = storage.remove_item("fa_users");
+                                            let _ = storage.remove_item("fa_user_plans");
+                                        }
+                                        let _ = window.location().set_href("/setup");
                                     }
-                                    let _ = window.location().set_href("/setup");
-                                }
+                                });
                             });
                         }
                     }
@@ -388,19 +392,23 @@ pub fn SettingsPage() -> impl IntoView {
                     // Clear
                     <button
                         class="w-full py-3 text-red-600 font-medium border border-red-200 rounded-lg active:bg-red-50"
-                        on:click=move |_| {
-                            let msg = i18n.t("settings.clear_confirm");
-                            let window = web_sys::window().unwrap();
-                            if window.confirm_with_message(&msg).unwrap_or(false) {
-                                leptos::task::spawn_local(async move {
-                                    match asset_store::clear_all_assets().await {
-                                        Ok(()) => {
-                                            status_message.set(Some("All data cleared".to_string()));
+                        on:click={
+                            let c = confirm.clone();
+                            move |_| {
+                                let msg = i18n.t("settings.clear_confirm");
+                                let ok_label = i18n.t("settings.clear_data");
+                                let cancel = i18n.t("asset.cancel");
+                                c.show(&msg, ConfirmStyle::Danger, &ok_label, &cancel, move || {
+                                    leptos::task::spawn_local(async move {
+                                        match asset_store::clear_all_assets().await {
+                                            Ok(()) => {
+                                                status_message.set(Some("All data cleared".to_string()));
+                                            }
+                                            Err(e) => {
+                                                status_message.set(Some(format!("Clear failed: {}", e)));
+                                            }
                                         }
-                                        Err(e) => {
-                                            status_message.set(Some(format!("Clear failed: {}", e)));
-                                        }
-                                    }
+                                    });
                                 });
                             }
                         }
