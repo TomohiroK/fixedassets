@@ -4,7 +4,7 @@ use crate::i18n::use_i18n;
 use crate::models::asset::{Asset, Category, DepreciationPosting};
 use crate::models::depreciation;
 use crate::stores::asset_store;
-use crate::components::common::{use_confirm, ConfirmStyle};
+use crate::components::common::{use_confirm, ConfirmStyle, format_currency};
 
 #[component]
 pub fn DepreciationPage() -> impl IntoView {
@@ -24,8 +24,11 @@ pub fn DepreciationPage() -> impl IntoView {
     let sel_asset_id = RwSignal::new(String::new());
 
     let refresh = RwSignal::new(0u32);
-    let status_msg = RwSignal::new(Option::<(String, bool)>::None); // (message, is_success)
+    let status_msg = RwSignal::new(Option::<(String, bool)>::None);
     let is_processing = RwSignal::new(false);
+
+    // Tab: 0=Processing, 1=Summary
+    let active_tab = RwSignal::new(0u32);
 
     // Load all assets reactively
     let assets_resource = LocalResource::new(move || {
@@ -91,7 +94,6 @@ pub fn DepreciationPage() -> impl IntoView {
             if amount == Decimal::ZERO && !already {
                 continue;
             }
-            // Always include in total (both posted and new)
             total += amount;
             let label = if asset.asset_number.is_empty() {
                 asset.name.clone()
@@ -175,12 +177,11 @@ pub fn DepreciationPage() -> impl IntoView {
         );
     };
 
-    // Action: Cancel month (dynamic - cancels selected month if posted, otherwise previous month)
+    // Action: Cancel month
     let do_cancel_month = move || {
         let year = sel_year.get();
         let month = sel_month.get();
 
-        // If selected month has postings, cancel that month; otherwise cancel previous month
         let has_current = selected_month_has_postings();
         let (t_year, t_month) = if has_current {
             (year, month)
@@ -293,10 +294,6 @@ pub fn DepreciationPage() -> impl IntoView {
         );
     };
 
-    // Helper: check if a mini-calendar month is selected
-    let is_sel = move |m: u32| -> bool { sel_month.get() == m && sel_year.get() == current_year };
-    let is_today_month = move |m: u32| -> bool { m == current_month };
-
     // Check if there are unposted assets to process
     let has_unposted = move || -> bool {
         let (items, _) = preview();
@@ -312,6 +309,66 @@ pub fn DepreciationPage() -> impl IntoView {
         }
     };
 
+    // ========================
+    // Summary: category-wise accumulated depreciation up to selected month
+    // ========================
+    let category_summary = move || -> Vec<(Category, String, u32, Decimal, Decimal, Decimal)> {
+        let all = match assets_resource.get() {
+            Some(a) => (*a).clone(),
+            None => return vec![],
+        };
+        let target_ym = sel_year.get() * 12 + sel_month.get();
+
+        let categories = Category::all();
+        let mut result = Vec::new();
+
+        for cat in categories {
+            let cat_assets: Vec<&Asset> = all.iter()
+                .filter(|a| a.category == cat && depreciation::is_postable(a))
+                .collect();
+
+            if cat_assets.is_empty() {
+                continue;
+            }
+
+            let asset_count = cat_assets.len() as u32;
+            let mut total_cost = Decimal::ZERO;
+            let mut total_acc_dep = Decimal::ZERO;
+
+            for asset in &cat_assets {
+                total_cost += asset.total_cost();
+                // Sum postings up to and including the selected month
+                let acc: Decimal = asset.postings.iter()
+                    .filter(|p| p.year * 12 + p.month <= target_ym)
+                    .map(|p| p.amount)
+                    .sum();
+                total_acc_dep += acc;
+            }
+
+            let book_value = total_cost - total_acc_dep;
+            let cat_key = cat.i18n_key().to_string();
+            result.push((cat, cat_key, asset_count, total_cost, total_acc_dep, book_value));
+        }
+
+        result
+    };
+
+    // Grand total for summary
+    let summary_totals = move || -> (u32, Decimal, Decimal, Decimal) {
+        let summary = category_summary();
+        let mut count = 0u32;
+        let mut cost = Decimal::ZERO;
+        let mut dep = Decimal::ZERO;
+        let mut bv = Decimal::ZERO;
+        for (_, _, c, tc, td, tbv) in &summary {
+            count += c;
+            cost += tc;
+            dep += td;
+            bv += tbv;
+        }
+        (count, cost, dep, bv)
+    };
+
     view! {
         <div class="page-container pb-32">
             <h2 class="page-title flex items-center gap-2">
@@ -320,6 +377,30 @@ pub fn DepreciationPage() -> impl IntoView {
                 </svg>
                 {move || i18n.t("dep_post.title")}
             </h2>
+
+            // Tab switcher: Processing / Summary
+            <div class="grid grid-cols-2 gap-1 bg-gray-100 rounded-lg p-1 mb-4">
+                <button
+                    class=move || if active_tab.get() == 0 {
+                        "py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-md shadow-sm"
+                    } else {
+                        "py-2.5 text-sm font-medium text-gray-600"
+                    }
+                    on:click=move |_| { active_tab.set(0); status_msg.set(None); }
+                >
+                    {move || i18n.t("dep_post.tab_processing")}
+                </button>
+                <button
+                    class=move || if active_tab.get() == 1 {
+                        "py-2.5 text-sm font-bold text-white bg-emerald-600 rounded-md shadow-sm"
+                    } else {
+                        "py-2.5 text-sm font-medium text-gray-600"
+                    }
+                    on:click=move |_| { active_tab.set(1); status_msg.set(None); }
+                >
+                    {move || i18n.t("dep_post.tab_summary")}
+                </button>
+            </div>
 
             // Status message
             {move || status_msg.get().map(|(msg, ok)| {
@@ -338,9 +419,8 @@ pub fn DepreciationPage() -> impl IntoView {
                 }
             })}
 
-            // Visual Calendar Card - shows today + selected processing month
+            // Visual Calendar Card (shared between both tabs)
             <div class="card mb-4">
-                // Today banner
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold">
@@ -354,7 +434,13 @@ pub fn DepreciationPage() -> impl IntoView {
                         </div>
                     </div>
                     <div class="text-right">
-                        <p class="text-xs text-gray-500">{move || i18n.t("dep_post.processing_month")}</p>
+                        <p class="text-xs text-gray-500">
+                            {move || if active_tab.get() == 0 {
+                                i18n.t("dep_post.processing_month")
+                            } else {
+                                i18n.t("dep_post.snapshot_date")
+                            }}
+                        </p>
                         <p class="text-lg font-bold text-emerald-700">
                             {move || format!("{}/{:02}", sel_year.get(), sel_month.get())}
                         </p>
@@ -390,7 +476,7 @@ pub fn DepreciationPage() -> impl IntoView {
                             <button
                                 class=move || {
                                     let selected = sel_month.get() == m;
-                                    let is_current = is_today_month(m) && sel_year.get() == current_year;
+                                    let is_current = m == current_month && sel_year.get() == current_year;
                                     if selected {
                                         "relative py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 shadow-sm"
                                     } else if is_current {
@@ -402,9 +488,8 @@ pub fn DepreciationPage() -> impl IntoView {
                                 on:click=move |_| { sel_month.set(m); status_msg.set(None); refresh.update(|v| *v += 1); }
                             >
                                 {month_label}
-                                // Dot indicator for today's month
                                 {move || {
-                                    let is_current = is_today_month(m) && sel_year.get() == current_year;
+                                    let is_current = m == current_month && sel_year.get() == current_year;
                                     let selected = sel_month.get() == m;
                                     if is_current && !selected {
                                         Some(view! {
@@ -424,196 +509,292 @@ pub fn DepreciationPage() -> impl IntoView {
                 </div>
             </div>
 
-            // Scope selector
-            <div class="card mb-4">
-                <h3 class="text-sm font-semibold text-gray-700 mb-2">{move || i18n.t("dep_post.scope")}</h3>
-                <div class="grid grid-cols-3 gap-1 bg-gray-100 rounded-lg p-1 mb-3">
-                    <button
-                        class=move || if scope.get() == 0 { "py-2 text-xs font-bold text-white bg-emerald-600 rounded-md" } else { "py-2 text-xs font-medium text-gray-600" }
-                        on:click=move |_| { scope.set(0); status_msg.set(None); refresh.update(|v| *v += 1); }
-                    >{move || i18n.t("dep_post.scope_all")}</button>
-                    <button
-                        class=move || if scope.get() == 1 { "py-2 text-xs font-bold text-white bg-emerald-600 rounded-md" } else { "py-2 text-xs font-medium text-gray-600" }
-                        on:click=move |_| { scope.set(1); status_msg.set(None); refresh.update(|v| *v += 1); }
-                    >{move || i18n.t("dep_post.scope_category")}</button>
-                    <button
-                        class=move || if scope.get() == 2 { "py-2 text-xs font-bold text-white bg-emerald-600 rounded-md" } else { "py-2 text-xs font-medium text-gray-600" }
-                        on:click=move |_| { scope.set(2); status_msg.set(None); refresh.update(|v| *v += 1); }
-                    >{move || i18n.t("dep_post.scope_individual")}</button>
-                </div>
+            // ====== TAB 0: Processing ======
+            {move || if active_tab.get() == 0 {
+                view! {
+                    <div>
+                        // Scope selector
+                        <div class="card mb-4">
+                            <h3 class="text-sm font-semibold text-gray-700 mb-2">{move || i18n.t("dep_post.scope")}</h3>
+                            <div class="grid grid-cols-3 gap-1 bg-gray-100 rounded-lg p-1 mb-3">
+                                <button
+                                    class=move || if scope.get() == 0 { "py-2 text-xs font-bold text-white bg-emerald-600 rounded-md" } else { "py-2 text-xs font-medium text-gray-600" }
+                                    on:click=move |_| { scope.set(0); status_msg.set(None); refresh.update(|v| *v += 1); }
+                                >{move || i18n.t("dep_post.scope_all")}</button>
+                                <button
+                                    class=move || if scope.get() == 1 { "py-2 text-xs font-bold text-white bg-emerald-600 rounded-md" } else { "py-2 text-xs font-medium text-gray-600" }
+                                    on:click=move |_| { scope.set(1); status_msg.set(None); refresh.update(|v| *v += 1); }
+                                >{move || i18n.t("dep_post.scope_category")}</button>
+                                <button
+                                    class=move || if scope.get() == 2 { "py-2 text-xs font-bold text-white bg-emerald-600 rounded-md" } else { "py-2 text-xs font-medium text-gray-600" }
+                                    on:click=move |_| { scope.set(2); status_msg.set(None); refresh.update(|v| *v += 1); }
+                                >{move || i18n.t("dep_post.scope_individual")}</button>
+                            </div>
 
-                // Category selector (scope=1)
-                {move || if scope.get() == 1 {
-                    view! {
-                        <select
-                            class="input-field"
-                            on:change=move |ev| {
-                                let v: usize = event_target_value(&ev).parse().unwrap_or(0);
-                                sel_category.set(v);
-                            }
-                        >
-                            {Category::all().into_iter().enumerate().map(|(idx, cat)| {
-                                let key = cat.i18n_key().to_string();
-                                view! {
-                                    <option value=idx.to_string()>{move || i18n.t(&key)}</option>
-                                }
-                            }).collect::<Vec<_>>()}
-                        </select>
-                    }.into_any()
-                } else if scope.get() == 2 {
-                    // Individual asset selector (scope=2)
-                    view! {
-                        <Suspense fallback=|| ()>
-                            {move || assets_resource.get().map(|all_assets| {
-                                let postable: Vec<_> = all_assets.iter()
-                                    .filter(|a| depreciation::is_postable(a))
-                                    .collect();
+                            {move || if scope.get() == 1 {
                                 view! {
                                     <select
                                         class="input-field"
                                         on:change=move |ev| {
-                                            sel_asset_id.set(event_target_value(&ev));
+                                            let v: usize = event_target_value(&ev).parse().unwrap_or(0);
+                                            sel_category.set(v);
                                         }
                                     >
-                                        <option value="">{move || i18n.t("dep_post.select_asset")}</option>
-                                        {postable.into_iter().map(|a| {
-                                            let id = a.id.clone();
-                                            let label = if a.asset_number.is_empty() {
-                                                a.name.clone()
-                                            } else {
-                                                format!("{} {}", a.asset_number, a.name)
-                                            };
+                                        {Category::all().into_iter().enumerate().map(|(idx, cat)| {
+                                            let key = cat.i18n_key().to_string();
                                             view! {
-                                                <option value=id>{label}</option>
+                                                <option value=idx.to_string()>{move || i18n.t(&key)}</option>
                                             }
                                         }).collect::<Vec<_>>()}
                                     </select>
-                                }
-                            })}
-                        </Suspense>
-                    }.into_any()
-                } else {
-                    view! { <div></div> }.into_any()
-                }}
-            </div>
-
-            // Preview
-            <div class="card mb-4">
-                <h3 class="text-sm font-semibold text-gray-700 mb-3">{move || i18n.t("dep_post.preview")}</h3>
-                <Suspense fallback=move || view! { <p class="text-sm text-gray-400">{move || i18n.t("common.loading")}</p> }>
-                    {move || {
-                        // Trigger reactivity
-                        let _ = assets_resource.get();
-                        let (items, total) = preview();
-                        let new_count = items.iter().filter(|(_, _, _, already)| !already).count();
-
-                        if items.is_empty() {
-                            view! {
-                                <p class="text-sm text-gray-400 text-center py-4">{move || i18n.t("dep_post.no_targets")}</p>
-                            }.into_any()
-                        } else {
-                            let total_count = items.len();
-                            let posted_count = total_count - new_count;
-                            view! {
-                                <div>
-                                    // Summary
-                                    <div class="grid grid-cols-2 gap-3 mb-3">
-                                        <div class="bg-emerald-50 rounded-lg p-3 text-center">
-                                            <p class="text-xs text-emerald-600">{move || i18n.t("dep_post.target_count")}</p>
-                                            <p class="text-lg font-bold text-emerald-800">{total_count}</p>
-                                            {if posted_count != 0 {
-                                                view! {
-                                                    <p class="text-[10px] text-gray-400 mt-0.5">
-                                                        {format!("({} {})", posted_count, i18n.t("dep_post.already_posted"))}
-                                                    </p>
-                                                }.into_any()
-                                            } else {
-                                                view! { <span></span> }.into_any()
-                                            }}
-                                        </div>
-                                        <div class="bg-emerald-50 rounded-lg p-3 text-center">
-                                            <p class="text-xs text-emerald-600">{move || i18n.t("dep_post.total_amount")}</p>
-                                            <p class="text-lg font-bold text-emerald-800">{crate::components::common::format_currency(&total)}</p>
-                                        </div>
-                                    </div>
-
-                                    // Item list
-                                    <div class="max-h-60 overflow-y-auto space-y-1">
-                                        {items.into_iter().map(|(_id, label, amount, already)| {
-                                            let badge_cls = if already {
-                                                "text-[10px] px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded"
-                                            } else {
-                                                "text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded font-medium"
-                                            };
-                                            let amount_cls = if already {
-                                                "text-sm text-gray-400"
-                                            } else {
-                                                "text-sm font-medium text-gray-900"
-                                            };
-                                            let badge_text = if already {
-                                                i18n.t("dep_post.already_posted")
-                                            } else {
-                                                crate::components::common::format_currency(&amount)
-                                            };
+                                }.into_any()
+                            } else if scope.get() == 2 {
+                                view! {
+                                    <Suspense fallback=|| ()>
+                                        {move || assets_resource.get().map(|all_assets| {
+                                            let postable: Vec<_> = all_assets.iter()
+                                                .filter(|a| depreciation::is_postable(a))
+                                                .collect();
                                             view! {
-                                                <div class="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50">
-                                                    <span class="text-xs text-gray-700 truncate flex-1 mr-2">{label}</span>
-                                                    <div class="flex items-center gap-2 shrink-0">
-                                                        <span class=amount_cls>{crate::components::common::format_currency(&amount)}</span>
-                                                        {if already {
-                                                            view! { <span class=badge_cls>{badge_text}</span> }.into_any()
+                                                <select
+                                                    class="input-field"
+                                                    on:change=move |ev| {
+                                                        sel_asset_id.set(event_target_value(&ev));
+                                                    }
+                                                >
+                                                    <option value="">{move || i18n.t("dep_post.select_asset")}</option>
+                                                    {postable.into_iter().map(|a| {
+                                                        let id = a.id.clone();
+                                                        let label = if a.asset_number.is_empty() {
+                                                            a.name.clone()
+                                                        } else {
+                                                            format!("{} {}", a.asset_number, a.name)
+                                                        };
+                                                        view! {
+                                                            <option value=id>{label}</option>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </select>
+                                            }
+                                        })}
+                                    </Suspense>
+                                }.into_any()
+                            } else {
+                                view! { <div></div> }.into_any()
+                            }}
+                        </div>
+
+                        // Preview
+                        <div class="card mb-4">
+                            <h3 class="text-sm font-semibold text-gray-700 mb-3">{move || i18n.t("dep_post.preview")}</h3>
+                            <Suspense fallback=move || view! { <p class="text-sm text-gray-400">{move || i18n.t("common.loading")}</p> }>
+                                {move || {
+                                    let _ = assets_resource.get();
+                                    let (items, total) = preview();
+                                    let new_count = items.iter().filter(|(_, _, _, already)| !already).count();
+
+                                    if items.is_empty() {
+                                        view! {
+                                            <p class="text-sm text-gray-400 text-center py-4">{move || i18n.t("dep_post.no_targets")}</p>
+                                        }.into_any()
+                                    } else {
+                                        let total_count = items.len();
+                                        let posted_count = total_count - new_count;
+                                        view! {
+                                            <div>
+                                                <div class="grid grid-cols-2 gap-3 mb-3">
+                                                    <div class="bg-emerald-50 rounded-lg p-3 text-center">
+                                                        <p class="text-xs text-emerald-600">{move || i18n.t("dep_post.target_count")}</p>
+                                                        <p class="text-lg font-bold text-emerald-800">{total_count}</p>
+                                                        {if posted_count != 0 {
+                                                            view! {
+                                                                <p class="text-[10px] text-gray-400 mt-0.5">
+                                                                    {format!("({} {})", posted_count, i18n.t("dep_post.already_posted"))}
+                                                                </p>
+                                                            }.into_any()
                                                         } else {
                                                             view! { <span></span> }.into_any()
                                                         }}
                                                     </div>
+                                                    <div class="bg-emerald-50 rounded-lg p-3 text-center">
+                                                        <p class="text-xs text-emerald-600">{move || i18n.t("dep_post.total_amount")}</p>
+                                                        <p class="text-lg font-bold text-emerald-800">{format_currency(&total)}</p>
+                                                    </div>
                                                 </div>
-                                            }
-                                        }).collect::<Vec<_>>()}
-                                    </div>
-                                </div>
-                            }.into_any()
-                        }
-                    }}
-                </Suspense>
-            </div>
 
-            // Action buttons (fixed at bottom)
-            <div class="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40 max-w-lg mx-auto space-y-2">
-                // Process button - disabled when processing or all already posted
-                <button
-                    class="w-full py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 bg-emerald-600 text-white active:bg-emerald-700 disabled:opacity-40"
-                    disabled=move || is_processing.get() || !has_unposted()
-                    on:click=move |_| do_process()
-                >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    {move || i18n.t("dep_post.action_process")}
-                </button>
-                // Cancel buttons row
-                <div class="grid grid-cols-2 gap-2">
-                    <button
-                        class="py-2.5 rounded-lg font-medium text-xs flex items-center justify-center gap-1 border border-amber-300 text-amber-700 bg-amber-50 active:bg-amber-100 disabled:opacity-40"
-                        disabled=move || is_processing.get()
-                        on:click=move |_| do_cancel_month()
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
-                        </svg>
-                        {cancel_month_label}
-                    </button>
-                    <button
-                        class="py-2.5 rounded-lg font-medium text-xs flex items-center justify-center gap-1 border border-red-300 text-red-700 bg-red-50 active:bg-red-100 disabled:opacity-40"
-                        disabled=move || is_processing.get()
-                        on:click=move |_| do_cancel_all()
-                    >
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        {move || i18n.t("dep_post.action_cancel_all")}
-                    </button>
-                </div>
-            </div>
+                                                <div class="max-h-60 overflow-y-auto space-y-1">
+                                                    {items.into_iter().map(|(_id, label, amount, already)| {
+                                                        let amount_cls = if already {
+                                                            "text-sm text-gray-400"
+                                                        } else {
+                                                            "text-sm font-medium text-gray-900"
+                                                        };
+                                                        view! {
+                                                            <div class="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50">
+                                                                <span class="text-xs text-gray-700 truncate flex-1 mr-2">{label}</span>
+                                                                <div class="flex items-center gap-2 shrink-0">
+                                                                    <span class=amount_cls>{format_currency(&amount)}</span>
+                                                                    {if already {
+                                                                        view! { <span class="text-[10px] px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded">{i18n.t("dep_post.already_posted")}</span> }.into_any()
+                                                                    } else {
+                                                                        view! { <span></span> }.into_any()
+                                                                    }}
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                    }).collect::<Vec<_>>()}
+                                                </div>
+                                            </div>
+                                        }.into_any()
+                                    }
+                                }}
+                            </Suspense>
+                        </div>
+                    </div>
+                }.into_any()
+            } else {
+                // ====== TAB 1: Summary (Category-wise accumulated depreciation) ======
+                view! {
+                    <div>
+                        <Suspense fallback=move || view! { <p class="text-sm text-gray-400">{move || i18n.t("common.loading")}</p> }>
+                            {move || {
+                                let _ = assets_resource.get();
+                                let summary = category_summary();
+                                let (total_count, total_cost, total_dep, total_bv) = summary_totals();
+
+                                if summary.is_empty() {
+                                    view! {
+                                        <div class="card">
+                                            <p class="text-sm text-gray-400 text-center py-6">{move || i18n.t("dep_post.no_targets")}</p>
+                                        </div>
+                                    }.into_any()
+                                } else {
+                                    view! {
+                                        <div>
+                                            // Grand total card
+                                            <div class="card mb-4">
+                                                <h3 class="text-sm font-semibold text-gray-700 mb-3">
+                                                    {move || format!("{}/{:02} {}", sel_year.get(), sel_month.get(), i18n.t("dep_post.summary_as_of"))}
+                                                </h3>
+                                                <div class="grid grid-cols-3 gap-2">
+                                                    <div class="bg-blue-50 rounded-lg p-3 text-center">
+                                                        <p class="text-[10px] text-blue-600 mb-1">{move || i18n.t("dep_post.summary_cost")}</p>
+                                                        <p class="text-sm font-bold text-blue-800">{format_currency(&total_cost)}</p>
+                                                    </div>
+                                                    <div class="bg-amber-50 rounded-lg p-3 text-center">
+                                                        <p class="text-[10px] text-amber-600 mb-1">{move || i18n.t("dep_post.summary_acc_dep")}</p>
+                                                        <p class="text-sm font-bold text-amber-800">{format_currency(&total_dep)}</p>
+                                                    </div>
+                                                    <div class="bg-emerald-50 rounded-lg p-3 text-center">
+                                                        <p class="text-[10px] text-emerald-600 mb-1">{move || i18n.t("dep_post.summary_book_value")}</p>
+                                                        <p class="text-sm font-bold text-emerald-800">{format_currency(&total_bv)}</p>
+                                                    </div>
+                                                </div>
+                                                <p class="text-[10px] text-gray-400 text-right mt-2">
+                                                    {move || format!("{} {}", total_count, i18n.t("dep_post.summary_assets_unit"))}
+                                                </p>
+                                            </div>
+
+                                            // Category breakdown
+                                            <div class="space-y-2">
+                                                {summary.into_iter().map(|(_, cat_key, count, cost, dep, bv)| {
+                                                    let dep_ratio = if cost > Decimal::ZERO {
+                                                        let pct = (dep * Decimal::from(100) / cost).round_dp(1);
+                                                        format!("{}%", pct)
+                                                    } else {
+                                                        "0%".to_string()
+                                                    };
+                                                    let bar_width = if cost > Decimal::ZERO {
+                                                        let pct = (dep * Decimal::from(100) / cost).round_dp(0);
+                                                        let w: u32 = pct.to_string().parse().unwrap_or(0);
+                                                        let w_clamped = if w > 100 { 100 } else { w };
+                                                        format!("{}%", w_clamped)
+                                                    } else {
+                                                        "0%".to_string()
+                                                    };
+                                                    view! {
+                                                        <div class="card">
+                                                            <div class="flex items-center justify-between mb-2">
+                                                                <div class="flex items-center gap-2">
+                                                                    <h4 class="text-sm font-semibold text-gray-800">{move || i18n.t(&cat_key)}</h4>
+                                                                    <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                                                                        {format!("{}{}", count, i18n.t("dep_post.summary_assets_unit"))}
+                                                                    </span>
+                                                                </div>
+                                                                <span class="text-xs font-bold text-amber-600">{dep_ratio}</span>
+                                                            </div>
+                                                            // Progress bar
+                                                            <div class="w-full h-2 bg-gray-100 rounded-full mb-3 overflow-hidden">
+                                                                <div class="h-full bg-amber-400 rounded-full transition-all" style=format!("width: {}", bar_width)></div>
+                                                            </div>
+                                                            <div class="grid grid-cols-3 gap-2 text-center">
+                                                                <div>
+                                                                    <p class="text-[10px] text-gray-400">{move || i18n.t("dep_post.summary_cost")}</p>
+                                                                    <p class="text-xs font-medium text-gray-800">{format_currency(&cost)}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p class="text-[10px] text-gray-400">{move || i18n.t("dep_post.summary_acc_dep")}</p>
+                                                                    <p class="text-xs font-medium text-amber-700">{format_currency(&dep)}</p>
+                                                                </div>
+                                                                <div>
+                                                                    <p class="text-[10px] text-gray-400">{move || i18n.t("dep_post.summary_book_value")}</p>
+                                                                    <p class="text-xs font-medium text-emerald-700">{format_currency(&bv)}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                }).collect::<Vec<_>>()}
+                                            </div>
+                                        </div>
+                                    }.into_any()
+                                }
+                            }}
+                        </Suspense>
+                    </div>
+                }.into_any()
+            }}
+
+            // Action buttons (only on Processing tab, fixed at bottom)
+            {move || if active_tab.get() == 0 {
+                Some(view! {
+                    <div class="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40 max-w-lg mx-auto space-y-2">
+                        <button
+                            class="w-full py-3 rounded-lg font-medium text-sm flex items-center justify-center gap-2 bg-emerald-600 text-white active:bg-emerald-700 disabled:opacity-40"
+                            disabled=move || is_processing.get() || !has_unposted()
+                            on:click=move |_| do_process()
+                        >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            {move || i18n.t("dep_post.action_process")}
+                        </button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button
+                                class="py-2.5 rounded-lg font-medium text-xs flex items-center justify-center gap-1 border border-amber-300 text-amber-700 bg-amber-50 active:bg-amber-100 disabled:opacity-40"
+                                disabled=move || is_processing.get()
+                                on:click=move |_| do_cancel_month()
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                </svg>
+                                {cancel_month_label}
+                            </button>
+                            <button
+                                class="py-2.5 rounded-lg font-medium text-xs flex items-center justify-center gap-1 border border-red-300 text-red-700 bg-red-50 active:bg-red-100 disabled:opacity-40"
+                                disabled=move || is_processing.get()
+                                on:click=move |_| do_cancel_all()
+                            >
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                                {move || i18n.t("dep_post.action_cancel_all")}
+                            </button>
+                        </div>
+                    </div>
+                })
+            } else {
+                None
+            }}
         </div>
     }
 }
