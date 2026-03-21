@@ -54,6 +54,11 @@ fn effective_salvage_value(asset: &Asset) -> Decimal {
     current_rules().effective_salvage(&asset.category, asset.salvage_value)
 }
 
+/// Get the effective total cost (original + CapEx)
+fn effective_cost(asset: &Asset) -> Decimal {
+    asset.total_cost()
+}
+
 /// Get the effective depreciation method
 fn effective_method(asset: &Asset) -> DepreciationMethod {
     current_rules().effective_method(&asset.category, &asset.depreciation_method)
@@ -63,7 +68,8 @@ pub fn calculate_schedule(asset: &Asset) -> Vec<DepreciationScheduleRow> {
     if is_non_depreciable(&asset.category) {
         return vec![];
     }
-    if asset.useful_life == 0 || asset.cost <= Decimal::ZERO {
+    let cost = effective_cost(asset);
+    if asset.useful_life == 0 || cost <= Decimal::ZERO {
         return vec![];
     }
 
@@ -71,7 +77,7 @@ pub fn calculate_schedule(asset: &Asset) -> Vec<DepreciationScheduleRow> {
     let country = current_country();
     let salvage = effective_salvage_value(asset);
 
-    if asset.cost <= salvage {
+    if cost <= salvage {
         return vec![];
     }
 
@@ -101,13 +107,14 @@ pub fn calculate_schedule(asset: &Asset) -> Vec<DepreciationScheduleRow> {
 // 年間償却費 = 取得原価 × 償却率 (償却率 = 1 / 耐用年数)
 // ============================================================
 fn straight_line_schedule(asset: &Asset, salvage: Decimal) -> Vec<DepreciationScheduleRow> {
+    let cost = effective_cost(asset);
     let depreciation_rate = Decimal::ONE / Decimal::from(asset.useful_life);
-    let annual_expense = (asset.cost * depreciation_rate).round_dp(2);
+    let annual_expense = (cost * depreciation_rate).round_dp(2);
     let prior_months = asset.prior_months_total();
-    let depreciable_amount = asset.cost - salvage;
+    let depreciable_amount = cost - salvage;
 
     let mut rows = Vec::new();
-    let mut opening = asset.cost;
+    let mut opening = cost;
     let mut accumulated = Decimal::ZERO;
 
     for year in 1..=asset.useful_life {
@@ -147,13 +154,14 @@ fn straight_line_schedule(asset: &Asset, salvage: Decimal) -> Vec<DepreciationSc
 // When expense < guarantee amount, switch to revised SL
 // ============================================================
 fn japan_declining_balance_schedule(asset: &Asset, salvage: Decimal) -> Vec<DepreciationScheduleRow> {
+    let cost = effective_cost(asset);
     let rate = Decimal::from(2) / Decimal::from(asset.useful_life);
     let guarantee_rate = japan_guarantee_rate(asset.useful_life);
-    let guarantee_amount = (asset.cost * guarantee_rate).round_dp(2);
+    let guarantee_amount = (cost * guarantee_rate).round_dp(2);
     let prior_months = asset.prior_months_total();
 
     let mut rows = Vec::new();
-    let mut opening = asset.cost;
+    let mut opening = cost;
     let mut switched_to_sl = false;
     let mut revised_annual: Decimal = Decimal::ZERO;
 
@@ -281,11 +289,12 @@ fn japan_guarantee_rate(useful_life: u32) -> Decimal {
 // No guarantee amount switching. Simple DB with floor at salvage.
 // ============================================================
 fn standard_declining_balance_schedule(asset: &Asset, salvage: Decimal, country: &AseanCountry) -> Vec<DepreciationScheduleRow> {
+    let cost = effective_cost(asset);
     let rate = db_rate_for_country(asset, country);
     let prior_months = asset.prior_months_total();
 
     let mut rows = Vec::new();
-    let mut opening = asset.cost;
+    let mut opening = cost;
 
     for year in 1..=asset.useful_life {
         let db_expense = (opening * rate).round_dp(2);
@@ -389,12 +398,13 @@ fn indonesia_rates(category: &Category, useful_life: u32) -> (Decimal, Option<De
 }
 
 fn indonesia_sl_schedule(asset: &Asset, salvage: Decimal, rate: Decimal) -> Vec<DepreciationScheduleRow> {
-    let annual_expense = (asset.cost * rate).round_dp(2);
-    let depreciable_amount = asset.cost - salvage;
+    let cost = effective_cost(asset);
+    let annual_expense = (cost * rate).round_dp(2);
+    let depreciable_amount = cost - salvage;
     let prior_months = asset.prior_months_total();
 
     let mut rows = Vec::new();
-    let mut opening = asset.cost;
+    let mut opening = cost;
     let mut accumulated = Decimal::ZERO;
 
     for year in 1..=asset.useful_life {
@@ -428,10 +438,11 @@ fn indonesia_sl_schedule(asset: &Asset, salvage: Decimal, rate: Decimal) -> Vec<
 }
 
 fn indonesia_db_schedule(asset: &Asset, salvage: Decimal, rate: Decimal) -> Vec<DepreciationScheduleRow> {
+    let cost = effective_cost(asset);
     let prior_months = asset.prior_months_total();
 
     let mut rows = Vec::new();
-    let mut opening = asset.cost;
+    let mut opening = cost;
 
     for year in 1..=asset.useful_life {
         let db_expense = (opening * rate).round_dp(2);
@@ -469,37 +480,38 @@ fn indonesia_db_schedule(asset: &Asset, salvage: Decimal, rate: Decimal) -> Vec<
 // Year 1: IA + AA, subsequent years: AA only
 // ============================================================
 fn capital_allowance_schedule(asset: &Asset, country: &AseanCountry, rules: &CountryRules) -> Vec<DepreciationScheduleRow> {
+    let cost = effective_cost(asset);
     let ia_rate = rules.initial_allowance_rate.unwrap_or(Decimal::from_str("0.20").unwrap());
     let aa_rate = capital_allowance_aa_rate(asset, country);
     let prior_months = asset.prior_months_total();
 
-    let ia = (asset.cost * ia_rate).round_dp(2);
+    let ia = (cost * ia_rate).round_dp(2);
     let aa = match country {
         AseanCountry::Singapore => {
             // SG: AA = (Cost - IA) / working life
-            ((asset.cost - ia) / Decimal::from(asset.useful_life)).round_dp(2)
+            ((cost - ia) / Decimal::from(asset.useful_life)).round_dp(2)
         }
         AseanCountry::Malaysia => {
             // MY: AA = Cost × AA rate
-            (asset.cost * aa_rate).round_dp(2)
+            (cost * aa_rate).round_dp(2)
         }
         _ => Decimal::ZERO,
     };
 
     let mut rows = Vec::new();
-    let mut opening = asset.cost;
+    let mut opening = cost;
     let mut accumulated = Decimal::ZERO;
 
     for year in 1..=asset.useful_life {
         let expense = if year == 1 {
             // Year 1: IA + AA
             let first_year = ia + aa;
-            first_year.min(asset.cost - accumulated).round_dp(2)
+            first_year.min(cost - accumulated).round_dp(2)
         } else if year == asset.useful_life {
             // Last year: write off remaining
             (opening).max(Decimal::ZERO).round_dp(2)
         } else {
-            let remaining = asset.cost - accumulated;
+            let remaining = cost - accumulated;
             aa.min(remaining).round_dp(2)
         };
 
@@ -563,7 +575,7 @@ pub fn accumulated_depreciation(asset: &Asset, years_elapsed: u32) -> Decimal {
 }
 
 pub fn current_book_value(asset: &Asset, years_elapsed: u32) -> Decimal {
-    (asset.cost - accumulated_depreciation(asset, years_elapsed) - asset.total_impairment()).max(Decimal::ZERO)
+    (asset.total_cost() - accumulated_depreciation(asset, years_elapsed) - asset.total_impairment()).max(Decimal::ZERO)
 }
 
 /// Returns the depreciation expense for the current/next un-depreciated year

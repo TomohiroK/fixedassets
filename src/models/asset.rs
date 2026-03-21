@@ -11,6 +11,14 @@ pub struct ImpairmentRecord {
     pub reason: String,     // Reason for impairment
 }
 
+/// Record of a capital expenditure (資本的支出)
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct CapExRecord {
+    pub date: String,           // YYYY-MM-DD
+    pub amount: Decimal,        // CapEx amount
+    pub description: String,    // What was added/improved
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Asset {
     pub id: String,
@@ -35,6 +43,9 @@ pub struct Asset {
     /// "disposal" or "sale" — distinguishes 除却 from 売却
     #[serde(default)]
     pub disposal_type: Option<String>,
+    /// Sub-type for disposal: "normal", "casualty", "disaster", "theft"
+    #[serde(default)]
+    pub disposal_sub_type: Option<String>,
     /// Disposal/sale date (YYYY-MM-DD)
     #[serde(default)]
     pub disposal_date: Option<String>,
@@ -47,6 +58,9 @@ pub struct Asset {
     /// Impairment loss records
     #[serde(default)]
     pub impairments: Vec<ImpairmentRecord>,
+    /// Capital expenditure records (資本的支出)
+    #[serde(default)]
+    pub capex_records: Vec<CapExRecord>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -85,10 +99,12 @@ impl Asset {
             status: AssetStatus::InUse,
             tags,
             disposal_type: None,
+            disposal_sub_type: None,
             disposal_date: None,
             disposal_proceeds: None,
             disposal_reason: None,
             impairments: Vec::new(),
+            capex_records: Vec::new(),
             created_at: now.clone(),
             updated_at: now,
         }
@@ -102,6 +118,16 @@ impl Asset {
     /// Total cumulative impairment loss
     pub fn total_impairment(&self) -> Decimal {
         self.impairments.iter().map(|r| r.amount).sum()
+    }
+
+    /// Total capital expenditure amount
+    pub fn total_capex(&self) -> Decimal {
+        self.capex_records.iter().map(|r| r.amount).sum()
+    }
+
+    /// Total cost including CapEx (used for depreciation calculation)
+    pub fn total_cost(&self) -> Decimal {
+        self.cost + self.total_capex()
     }
 
     pub fn acquisition_date_parsed(&self) -> Option<NaiveDate> {

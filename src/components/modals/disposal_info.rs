@@ -37,10 +37,45 @@ pub fn DisposalInfoSection(asset: Asset, is_sale: bool) -> impl IntoView {
     let proceeds_str = format_amount(proceeds);
     let gl_str = format_amount(if gain_loss < Decimal::ZERO { -gain_loss } else { gain_loss });
 
-    // Colors: sale = emerald, disposal = orange
-    let bg_class = if is_sale { "bg-emerald-50 border-emerald-200" } else { "bg-orange-50 border-orange-200" };
-    let title_color = if is_sale { "text-emerald-800" } else { "text-orange-800" };
-    let border_color = if is_sale { "border-emerald-200" } else { "border-orange-200" };
+    // Sub-type for disposal
+    let disposal_sub_type = asset.disposal_sub_type.clone().unwrap_or_else(|| "normal".to_string());
+    let is_casualty_type = matches!(disposal_sub_type.as_str(), "casualty" | "disaster" | "theft");
+
+    // Colors: sale = emerald, casualty types = red, normal disposal = orange
+    let (bg_class, title_color, border_color) = if is_sale {
+        ("bg-emerald-50 border-emerald-200", "text-emerald-800", "border-emerald-200")
+    } else if is_casualty_type {
+        match disposal_sub_type.as_str() {
+            "disaster" => ("bg-amber-50 border-amber-200", "text-amber-800", "border-amber-200"),
+            "theft" => ("bg-violet-50 border-violet-200", "text-violet-800", "border-violet-200"),
+            _ => ("bg-red-50 border-red-200", "text-red-800", "border-red-200"),  // casualty
+        }
+    } else {
+        ("bg-orange-50 border-orange-200", "text-orange-800", "border-orange-200")
+    };
+
+    // Sub-type badge
+    let sub_type_key = if is_sale {
+        "asset.type_sale".to_string()
+    } else {
+        match disposal_sub_type.as_str() {
+            "casualty" => "asset.dispose_sub_casualty".to_string(),
+            "disaster" => "asset.dispose_sub_disaster".to_string(),
+            "theft" => "asset.dispose_sub_theft".to_string(),
+            _ => "asset.dispose_sub_normal".to_string(),
+        }
+    };
+
+    let badge_class = if is_sale {
+        "bg-emerald-100 text-emerald-700"
+    } else {
+        match disposal_sub_type.as_str() {
+            "casualty" => "bg-red-100 text-red-700",
+            "disaster" => "bg-amber-100 text-amber-700",
+            "theft" => "bg-violet-100 text-violet-700",
+            _ => "bg-orange-100 text-orange-700",
+        }
+    };
 
     view! {
         <div class=format!("mt-4 border rounded-xl p-4 {}", bg_class)>
@@ -62,16 +97,10 @@ pub fn DisposalInfoSection(asset: Asset, is_sale: bool) -> impl IntoView {
             </h3>
             <div class="space-y-2 text-sm">
                 // Type badge
-                <div class="flex justify-between">
-                    <span class="text-gray-600">
-                        {if is_sale { "Type" } else { "Type" }}
-                    </span>
-                    <span class=if is_sale {
-                        "text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700"
-                    } else {
-                        "text-xs font-medium px-2 py-0.5 rounded-full bg-orange-100 text-orange-700"
-                    }>
-                        {move || if is_sale { i18n.t("asset.type_sale") } else { i18n.t("asset.type_disposal") }}
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">"Type"</span>
+                    <span class=format!("text-xs font-medium px-2 py-0.5 rounded-full {}", badge_class)>
+                        {move || i18n.t(&sub_type_key)}
                     </span>
                 </div>
                 // Date

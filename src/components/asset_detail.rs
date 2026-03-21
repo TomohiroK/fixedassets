@@ -32,7 +32,13 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
     let total_impairment = asset.total_impairment();
     let has_impairment = total_impairment > rust_decimal::Decimal::ZERO;
 
+    let total_capex = asset.total_capex();
+    let has_capex = total_capex > rust_decimal::Decimal::ZERO;
+    let total_cost = asset.total_cost();
+
     let cost_str = format_currency(&asset.cost);
+    let capex_str = format_currency(&total_capex);
+    let total_cost_str = format_currency(&total_cost);
     let book_val_str = format_currency(&book_val);
     let acc_dep_str = format_currency(&acc_dep);
     let salvage_str = format_currency(&asset.salvage_value);
@@ -161,6 +167,19 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                     view! {
                         <div class="pb-3 space-y-2 border-t border-gray-100 pt-2">
                             <CompactRow label=Signal::derive(move || i18n.t("asset.cost")) value=cost_str.clone() />
+                            {if has_capex {
+                                let cx_str = capex_str.clone();
+                                let tc_str = total_cost_str.clone();
+                                Some(view! {
+                                    <CompactRow label=Signal::derive(move || i18n.t("asset.capex_total")) value=format!("+{}", cx_str) />
+                                    <div class="flex justify-between items-center px-0 border-t border-gray-100 pt-1">
+                                        <span class="text-xs text-gray-500 font-medium">{move || i18n.t("asset.capex_new_total")}</span>
+                                        <span class="text-xs font-bold text-gray-900">{tc_str.clone()}</span>
+                                    </div>
+                                })
+                            } else {
+                                None
+                            }}
                             <CompactRow label=Signal::derive(move || i18n.t("asset.accumulated_depreciation")) value=acc_dep_str.clone() />
                             {if has_impairment {
                                 let imp_str = impairment_str.clone();
