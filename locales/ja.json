@@ -340,7 +340,15 @@
     "summary_cost": "取得価額",
     "summary_acc_dep": "償却累計額",
     "summary_book_value": "帳簿価額",
-    "summary_assets_unit": "件"
+    "summary_assets_unit": "件",
+    "ifrs_not_set": "IFRS未設定"
+  },
+  "standard": {
+    "local": "ローカル",
+    "ifrs": "IFRS",
+    "ifrs_settings": "IFRS設定",
+    "ifrs_hint": "IFRS用の耐用年数・残存価額・償却方法を設定します。未入力の場合はローカルと同じ値を使用します。",
+    "same_as_local": "ローカルと同じ"
   },
   "common": {
     "loading": "読み込み中...",

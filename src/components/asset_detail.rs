@@ -3,17 +3,22 @@ use crate::i18n::use_i18n;
 use crate::models::asset::Asset;
 use crate::models::depreciation;
 use crate::models::department::Department;
-use crate::components::common::format_currency;
+use crate::models::accounting_standard::use_accounting_standard;
+use crate::components::common::{format_currency, StandardToggle};
 use crate::components::photo_uploader::PhotoGallery;
 
 #[component]
 pub fn AssetDetailView(asset: Asset) -> impl IntoView {
     let i18n = use_i18n();
+    let standard = use_accounting_standard();
+    let asset_clone = asset.clone();
     let schedule = depreciation::calculate_schedule(&asset);
+    let ifrs_schedule = depreciation::calculate_ifrs_schedule(&asset);
     let status_class = asset.status.badge_class().to_string();
     let status_key = asset.status.i18n_key().to_string();
     let category_key = asset.category.i18n_key().to_string();
     let method_key = asset.depreciation_method.i18n_key().to_string();
+    let ifrs_method_key = asset.ifrs_method_effective().i18n_key().to_string();
 
     let prior_months = asset.prior_months_total();
     let prior_years_full = prior_months / 12;
@@ -27,12 +32,20 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
     };
     let total_years_elapsed = prior_years_full + own_years;
 
-    // Use actual posted depreciation if any postings exist, otherwise use schedule-based calculation
+    // Local (tax) calculations
     let posted_dep = asset.total_posted_depreciation();
     let schedule_dep = depreciation::accumulated_depreciation(&asset, total_years_elapsed);
-    let acc_dep = if posted_dep > rust_decimal::Decimal::ZERO { posted_dep } else { schedule_dep };
-    let book_val = asset.total_cost() - acc_dep - asset.total_impairment();
-    let annual_expense = depreciation::current_year_expense(&asset, total_years_elapsed);
+    let acc_dep_local = if posted_dep > rust_decimal::Decimal::ZERO { posted_dep } else { schedule_dep };
+    let book_val_local = asset.total_cost() - acc_dep_local - asset.total_impairment();
+    let annual_expense_local = depreciation::current_year_expense(&asset, total_years_elapsed);
+
+    // IFRS calculations
+    let posted_ifrs = asset.total_posted_ifrs_depreciation();
+    let schedule_ifrs = depreciation::ifrs_accumulated_depreciation(&asset, total_years_elapsed);
+    let acc_dep_ifrs = if posted_ifrs > rust_decimal::Decimal::ZERO { posted_ifrs } else { schedule_ifrs };
+    let book_val_ifrs = asset.total_cost() - acc_dep_ifrs - asset.total_impairment();
+    let annual_expense_ifrs = depreciation::ifrs_current_year_expense(&asset, total_years_elapsed);
+
     let total_impairment = asset.total_impairment();
     let has_impairment = total_impairment > rust_decimal::Decimal::ZERO;
 
@@ -43,15 +56,25 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
     let cost_str = format_currency(&asset.cost);
     let capex_str = format_currency(&total_capex);
     let total_cost_str = format_currency(&total_cost);
-    let book_val_str = format_currency(&book_val);
-    let acc_dep_str = format_currency(&acc_dep);
-    let salvage_str = format_currency(&asset.salvage_value);
-    let annual_expense_str = format_currency(&annual_expense);
+    // Local strings
+    let book_val_local_str = format_currency(&book_val_local);
+    let acc_dep_local_str = format_currency(&acc_dep_local);
+    let salvage_local_str = format_currency(&asset.salvage_value);
+    let annual_expense_local_str = format_currency(&annual_expense_local);
+    let useful_life_local_str = format!("{}{}", asset.useful_life, i18n.t("asset.years"));
+    // IFRS strings
+    let book_val_ifrs_str = format_currency(&book_val_ifrs);
+    let acc_dep_ifrs_str = format_currency(&acc_dep_ifrs);
+    let salvage_ifrs_str = format_currency(&asset.ifrs_salvage_value_effective());
+    let annual_expense_ifrs_str = format_currency(&annual_expense_ifrs);
+    let useful_life_ifrs_str = format!("{}{}", asset.ifrs_useful_life_effective(), i18n.t("asset.years"));
+
     let impairment_str = format_currency(&total_impairment);
-    let depreciation_done = annual_expense == rust_decimal::Decimal::ZERO;
+    let depreciation_done_local = annual_expense_local == rust_decimal::Decimal::ZERO;
+    let depreciation_done_ifrs = annual_expense_ifrs == rust_decimal::Decimal::ZERO;
     let acq_date = asset.acquisition_date.clone();
-    let useful_life_str = format!("{}{}", asset.useful_life, i18n.t("asset.years"));
     let method_val = i18n.t(&method_key);
+    let ifrs_method_val = i18n.t(&ifrs_method_key);
     let location = asset.location.clone();
     let description = asset.description.clone();
     let has_location = !asset.location.is_empty();
@@ -108,19 +131,29 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                 }}
             </div>
 
-            // Primary info: book value + annual expense (always visible, compact)
+            // Standard toggle + Primary info
             <div class="card py-3">
+                <div class="flex justify-end mb-2">
+                    <StandardToggle />
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="text-center">
                         <p class="text-[10px] text-gray-400 uppercase tracking-wide">{move || i18n.t("asset.book_value")}</p>
-                        <p class="text-xl font-bold text-blue-600 mt-0.5">{book_val_str.clone()}</p>
+                        <p class="text-xl font-bold text-blue-600 mt-0.5">
+                            {let local = book_val_local_str.clone(); let ifrs = book_val_ifrs_str.clone(); move || if standard.is_ifrs() { ifrs.clone() } else { local.clone() }}
+                        </p>
                     </div>
                     <div class="text-center">
                         <p class="text-[10px] text-gray-400 uppercase tracking-wide">{move || i18n.t("depreciation.annual_expense")}</p>
-                        {if depreciation_done {
-                            view! { <p class="text-sm font-bold text-green-600 mt-1">{move || i18n.t("depreciation.fully_depreciated")}</p> }.into_any()
-                        } else {
-                            view! { <p class="text-xl font-bold text-red-600 mt-0.5">{annual_expense_str.clone()}</p> }.into_any()
+                        {let local_str = annual_expense_local_str.clone(); let ifrs_str = annual_expense_ifrs_str.clone();
+                        move || {
+                            let done = if standard.is_ifrs() { depreciation_done_ifrs } else { depreciation_done_local };
+                            if done {
+                                view! { <p class="text-sm font-bold text-green-600 mt-1">{i18n.t("depreciation.fully_depreciated")}</p> }.into_any()
+                            } else {
+                                let val = if standard.is_ifrs() { ifrs_str.clone() } else { local_str.clone() };
+                                view! { <p class="text-xl font-bold text-red-600 mt-0.5">{val}</p> }.into_any()
+                            }
                         }}
                     </div>
                 </div>
@@ -172,6 +205,16 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                     </svg>
                 </button>
                 {move || if show_financials.get() {
+                    let cost_str = cost_str.clone();
+                    let capex_str = capex_str.clone();
+                    let total_cost_str = total_cost_str.clone();
+                    let acc_dep_l = acc_dep_local_str.clone();
+                    let acc_dep_i = acc_dep_ifrs_str.clone();
+                    let bv_l = book_val_local_str.clone();
+                    let bv_i = book_val_ifrs_str.clone();
+                    let sv_l = salvage_local_str.clone();
+                    let sv_i = salvage_ifrs_str.clone();
+                    let imp_str = impairment_str.clone();
                     view! {
                         <div class="pb-3 space-y-2 border-t border-gray-100 pt-2">
                             <CompactRow label=Signal::derive(move || i18n.t("asset.cost")) value=cost_str.clone() />
@@ -188,15 +231,24 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                             } else {
                                 None
                             }}
-                            <CompactRow label=Signal::derive(move || i18n.t("asset.accumulated_depreciation")) value=acc_dep_str.clone() />
+                            <CompactRow
+                                label=Signal::derive(move || i18n.t("asset.accumulated_depreciation"))
+                                value={let l = acc_dep_l.clone(); let i = acc_dep_i.clone(); if standard.is_ifrs() { i } else { l }}
+                            />
                             {if has_impairment {
-                                let imp_str = impairment_str.clone();
-                                Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.impairment_total")) value=format!("-{}", imp_str) /> })
+                                let imp = imp_str.clone();
+                                Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.impairment_total")) value=format!("-{}", imp) /> })
                             } else {
                                 None
                             }}
-                            <CompactRow label=Signal::derive(move || i18n.t("asset.book_value")) value=book_val_str.clone() />
-                            <CompactRow label=Signal::derive(move || i18n.t("asset.salvage_value")) value=salvage_str.clone() />
+                            <CompactRow
+                                label=Signal::derive(move || i18n.t("asset.book_value"))
+                                value={let l = bv_l.clone(); let i = bv_i.clone(); if standard.is_ifrs() { i } else { l }}
+                            />
+                            <CompactRow
+                                label=Signal::derive(move || i18n.t("asset.salvage_value"))
+                                value={let l = sv_l.clone(); let i = sv_i.clone(); if standard.is_ifrs() { i } else { l }}
+                            />
                         </div>
                     }.into_any()
                 } else {
@@ -220,16 +272,24 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                 </button>
                 {move || if show_details.get() {
                     let acq_date = acq_date.clone();
-                    let useful_life_str = useful_life_str.clone();
-                    let method_val = method_val.clone();
+                    let ul_local = useful_life_local_str.clone();
+                    let ul_ifrs = useful_life_ifrs_str.clone();
+                    let m_local = method_val.clone();
+                    let m_ifrs = ifrs_method_val.clone();
                     let prior_str = prior_str.clone();
                     let location = location.clone();
                     let description = description.clone();
                     view! {
                         <div class="pb-3 space-y-2 border-t border-gray-100 pt-2">
                             <CompactRow label=Signal::derive(move || i18n.t("asset.acquisition_date")) value=acq_date.clone() />
-                            <CompactRow label=Signal::derive(move || i18n.t("asset.useful_life")) value=useful_life_str.clone() />
-                            <CompactRow label=Signal::derive(move || i18n.t("asset.depreciation_method")) value=method_val.clone() />
+                            <CompactRow
+                                label=Signal::derive(move || i18n.t("asset.useful_life"))
+                                value={let l = ul_local.clone(); let i = ul_ifrs.clone(); if standard.is_ifrs() { i } else { l }}
+                            />
+                            <CompactRow
+                                label=Signal::derive(move || i18n.t("asset.depreciation_method"))
+                                value={let l = m_local.clone(); let i = m_ifrs.clone(); if standard.is_ifrs() { i } else { l }}
+                            />
                             {if has_prior {
                                 let prior_str = prior_str.clone();
                                 Some(view! { <CompactRow label=Signal::derive(move || i18n.t("asset.prior_depreciation")) value=prior_str.clone() /> })
@@ -278,7 +338,11 @@ pub fn AssetDetailView(asset: Asset) -> impl IntoView {
                             </svg>
                         </button>
                         {move || if show_schedule.get() {
-                            let schedule = depreciation::calculate_schedule(&asset);
+                            let schedule = if standard.is_ifrs() {
+                                depreciation::calculate_ifrs_schedule(&asset_clone)
+                            } else {
+                                depreciation::calculate_schedule(&asset_clone)
+                            };
                             view! {
                                 <div class="pb-3 border-t border-gray-100 pt-2">
                                     <div class="overflow-x-auto -mx-4 px-4">

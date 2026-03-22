@@ -1,5 +1,6 @@
 use leptos::prelude::*;
 use crate::i18n::use_i18n;
+use crate::models::accounting_standard::use_accounting_standard;
 
 #[component]
 pub fn LoadingSpinner() -> impl IntoView {
@@ -287,6 +288,38 @@ pub fn ConfirmDialogProvider(children: Children) -> impl IntoView {
                     </button>
                 </div>
             </div>
+        </div>
+    }
+}
+
+/// Compact toggle switch for Local ↔ IFRS accounting standard
+#[component]
+pub fn StandardToggle() -> impl IntoView {
+    let i18n = use_i18n();
+    let standard = use_accounting_standard();
+
+    view! {
+        <div class="flex items-center bg-gray-100 rounded-full p-0.5 text-[11px] font-medium">
+            <button
+                class=move || if standard.is_ifrs() {
+                    "px-3 py-1 rounded-full text-gray-500"
+                } else {
+                    "px-3 py-1 rounded-full bg-white text-emerald-700 shadow-sm font-bold"
+                }
+                on:click=move |_| { if standard.is_ifrs() { standard.toggle(); } }
+            >
+                {move || i18n.t("standard.local")}
+            </button>
+            <button
+                class=move || if standard.is_ifrs() {
+                    "px-3 py-1 rounded-full bg-white text-blue-700 shadow-sm font-bold"
+                } else {
+                    "px-3 py-1 rounded-full text-gray-500"
+                }
+                on:click=move |_| { if !standard.is_ifrs() { standard.toggle(); } }
+            >
+                "IFRS"
+            </button>
         </div>
     }
 }

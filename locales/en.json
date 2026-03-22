@@ -340,7 +340,15 @@
     "summary_cost": "Cost",
     "summary_acc_dep": "Acc. Dep.",
     "summary_book_value": "Book Value",
-    "summary_assets_unit": " assets"
+    "summary_assets_unit": " assets",
+    "ifrs_not_set": "IFRS N/A"
+  },
+  "standard": {
+    "local": "Local",
+    "ifrs": "IFRS",
+    "ifrs_settings": "IFRS Settings",
+    "ifrs_hint": "Set IFRS-specific useful life, salvage value, and method. Leave blank to use local values.",
+    "same_as_local": "Same as Local"
   },
   "common": {
     "loading": "Loading...",

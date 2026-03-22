@@ -3,13 +3,15 @@ use rust_decimal::Decimal;
 use crate::i18n::use_i18n;
 use crate::models::asset::{Asset, Category, DepreciationPosting};
 use crate::models::depreciation;
+use crate::models::accounting_standard::use_accounting_standard;
 use crate::stores::asset_store;
-use crate::components::common::{use_confirm, ConfirmStyle, format_currency};
+use crate::components::common::{use_confirm, ConfirmStyle, format_currency, StandardToggle};
 
 #[component]
 pub fn DepreciationPage() -> impl IntoView {
     let i18n = use_i18n();
     let confirm = use_confirm();
+    let standard = use_accounting_standard();
 
     let now = chrono::Utc::now();
     let current_year = now.format("%Y").to_string().parse::<u32>().unwrap_or(2026);
@@ -62,18 +64,23 @@ pub fn DepreciationPage() -> impl IntoView {
         }
     };
 
-    // Check if selected month has any postings in filtered assets
+    // Check if selected month has any postings in filtered assets (standard-aware)
     let selected_month_has_postings = move || -> bool {
         let year = sel_year.get();
         let month = sel_month.get();
+        let is_ifrs = standard.is_ifrs();
         let assets = filtered_assets();
-        assets.iter().any(|a| a.has_posting(year, month))
+        assets.iter().any(|a| {
+            if is_ifrs { a.has_ifrs_posting(year, month) } else { a.has_posting(year, month) }
+        })
     };
 
-    // Preview: compute targets and amounts
-    let preview = move || -> (Vec<(String, String, Decimal, bool)>, Decimal) {
+    // Preview: compute targets and amounts (standard-aware)
+    // status: 0=new, 1=already posted, 2=skipped (IFRS not configured)
+    let preview = move || -> (Vec<(String, String, Decimal, u8)>, Decimal) {
         let year = sel_year.get();
         let month = sel_month.get();
+        let is_ifrs = standard.is_ifrs();
         let assets = filtered_assets();
         let mut items = Vec::new();
         let mut total = Decimal::ZERO;
@@ -82,25 +89,35 @@ pub fn DepreciationPage() -> impl IntoView {
             if !depreciation::is_postable(asset) {
                 continue;
             }
-            let already = asset.has_posting(year, month);
-            let amount = if already {
-                asset.postings.iter()
-                    .find(|p| p.year == year && p.month == month)
-                    .map(|p| p.amount)
-                    .unwrap_or(Decimal::ZERO)
-            } else {
-                depreciation::monthly_depreciation(asset, year, month)
-            };
-            if amount == Decimal::ZERO && !already {
-                continue;
-            }
-            total += amount;
             let label = if asset.asset_number.is_empty() {
                 asset.name.clone()
             } else {
                 format!("{} {}", asset.asset_number, asset.name)
             };
-            items.push((asset.id.clone(), label, amount, already));
+
+            // In IFRS mode, skip assets without IFRS settings
+            if is_ifrs && !asset.has_ifrs_settings() {
+                items.push((asset.id.clone(), label, Decimal::ZERO, 2u8));
+                continue;
+            }
+
+            let already = if is_ifrs { asset.has_ifrs_posting(year, month) } else { asset.has_posting(year, month) };
+            let postings_ref = if is_ifrs { &asset.ifrs_postings } else { &asset.postings };
+            let amount = if already {
+                postings_ref.iter()
+                    .find(|p| p.year == year && p.month == month)
+                    .map(|p| p.amount)
+                    .unwrap_or(Decimal::ZERO)
+            } else {
+                if is_ifrs {
+                    depreciation::ifrs_monthly_depreciation(asset, year, month)
+                } else {
+                    depreciation::monthly_depreciation(asset, year, month)
+                }
+            };
+            total += amount;
+            let status = if already { 1u8 } else { 0u8 };
+            items.push((asset.id.clone(), label, amount, status));
         }
         (items, total)
     };
@@ -110,7 +127,7 @@ pub fn DepreciationPage() -> impl IntoView {
         let year = sel_year.get();
         let month = sel_month.get();
         let (items, _) = preview();
-        let new_count = items.iter().filter(|(_, _, _, already)| !already).count();
+        let new_count = items.iter().filter(|(_, _, _, status)| *status == 0).count();
         if new_count == 0 {
             status_msg.set(Some((i18n.t("dep_post.no_targets_to_process"), false)));
             return;
@@ -127,6 +144,7 @@ pub fn DepreciationPage() -> impl IntoView {
             &cancel_label,
             move || {
                 is_processing.set(true);
+                let is_ifrs = standard.is_ifrs();
                 leptos::task::spawn_local(async move {
                     let assets = asset_store::get_all_assets().await.unwrap_or_default();
                     let filtered_ids: Vec<String> = {
@@ -152,19 +170,33 @@ pub fn DepreciationPage() -> impl IntoView {
                         if !depreciation::is_postable(&asset) {
                             continue;
                         }
-                        if asset.has_posting(year, month) {
+                        // In IFRS mode, skip assets without IFRS settings
+                        if is_ifrs && !asset.has_ifrs_settings() {
                             continue;
                         }
-                        let amount = depreciation::monthly_depreciation(&asset, year, month);
+                        let already = if is_ifrs { asset.has_ifrs_posting(year, month) } else { asset.has_posting(year, month) };
+                        if already {
+                            continue;
+                        }
+                        let amount = if is_ifrs {
+                            depreciation::ifrs_monthly_depreciation(&asset, year, month)
+                        } else {
+                            depreciation::monthly_depreciation(&asset, year, month)
+                        };
                         if amount == Decimal::ZERO {
                             continue;
                         }
-                        asset.postings.push(DepreciationPosting {
+                        let posting = DepreciationPosting {
                             year,
                             month,
                             amount,
                             posted_at: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string(),
-                        });
+                        };
+                        if is_ifrs {
+                            asset.ifrs_postings.push(posting);
+                        } else {
+                            asset.postings.push(posting);
+                        }
                         asset.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
                         let _ = asset_store::save_asset(&asset).await;
                         count += 1;
@@ -206,6 +238,7 @@ pub fn DepreciationPage() -> impl IntoView {
             &cancel_label,
             move || {
                 is_processing.set(true);
+                let is_ifrs = standard.is_ifrs();
                 leptos::task::spawn_local(async move {
                     let assets = asset_store::get_all_assets().await.unwrap_or_default();
                     let filtered_ids: Vec<String> = {
@@ -228,9 +261,10 @@ pub fn DepreciationPage() -> impl IntoView {
                         if !filtered_ids.contains(&asset.id) {
                             continue;
                         }
-                        let before = asset.postings.len();
-                        asset.postings.retain(|p| !(p.year == t_year && p.month == t_month));
-                        if asset.postings.len() < before {
+                        let postings = if is_ifrs { &mut asset.ifrs_postings } else { &mut asset.postings };
+                        let before = postings.len();
+                        postings.retain(|p| !(p.year == t_year && p.month == t_month));
+                        if postings.len() < before {
                             asset.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
                             let _ = asset_store::save_asset(&asset).await;
                             count += 1;
@@ -257,6 +291,7 @@ pub fn DepreciationPage() -> impl IntoView {
             &cancel_label,
             move || {
                 is_processing.set(true);
+                let is_ifrs = standard.is_ifrs();
                 leptos::task::spawn_local(async move {
                     let assets = asset_store::get_all_assets().await.unwrap_or_default();
                     let filtered_ids: Vec<String> = {
@@ -279,8 +314,9 @@ pub fn DepreciationPage() -> impl IntoView {
                         if !filtered_ids.contains(&asset.id) {
                             continue;
                         }
-                        if !asset.postings.is_empty() {
-                            asset.postings.clear();
+                        let postings = if is_ifrs { &mut asset.ifrs_postings } else { &mut asset.postings };
+                        if !postings.is_empty() {
+                            postings.clear();
                             asset.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
                             let _ = asset_store::save_asset(&asset).await;
                             count += 1;
@@ -294,10 +330,10 @@ pub fn DepreciationPage() -> impl IntoView {
         );
     };
 
-    // Check if there are unposted assets to process
+    // Check if there are unposted assets to process (status=0 means new/unposted)
     let has_unposted = move || -> bool {
         let (items, _) = preview();
-        items.iter().any(|(_, _, _, already)| !already)
+        items.iter().any(|(_, _, _, status)| *status == 0)
     };
 
     // Cancel button label (dynamic)
@@ -318,6 +354,7 @@ pub fn DepreciationPage() -> impl IntoView {
             None => return vec![],
         };
         let target_ym = sel_year.get() * 12 + sel_month.get();
+        let is_ifrs = standard.is_ifrs();
 
         let categories = Category::all();
         let mut result = Vec::new();
@@ -337,8 +374,8 @@ pub fn DepreciationPage() -> impl IntoView {
 
             for asset in &cat_assets {
                 total_cost += asset.total_cost();
-                // Sum postings up to and including the selected month
-                let acc: Decimal = asset.postings.iter()
+                let postings = if is_ifrs { &asset.ifrs_postings } else { &asset.postings };
+                let acc: Decimal = postings.iter()
                     .filter(|p| p.year * 12 + p.month <= target_ym)
                     .map(|p| p.amount)
                     .sum();
@@ -371,12 +408,15 @@ pub fn DepreciationPage() -> impl IntoView {
 
     view! {
         <div class="page-container pb-32">
-            <h2 class="page-title flex items-center gap-2">
-                <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                </svg>
-                {move || i18n.t("dep_post.title")}
-            </h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="page-title flex items-center gap-2 mb-0">
+                    <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    {move || i18n.t("dep_post.title")}
+                </h2>
+                <StandardToggle />
+            </div>
 
             // Tab switcher: Processing / Summary
             <div class="grid grid-cols-2 gap-1 bg-gray-100 rounded-lg p-1 mb-4">
@@ -591,21 +631,23 @@ pub fn DepreciationPage() -> impl IntoView {
                                 {move || {
                                     let _ = assets_resource.get();
                                     let (items, total) = preview();
-                                    let new_count = items.iter().filter(|(_, _, _, already)| !already).count();
+                                    // status: 0=new, 1=posted, 2=ifrs_not_configured
+                                    let new_count = items.iter().filter(|(_, _, _, s)| *s == 0).count();
 
                                     if items.is_empty() {
                                         view! {
                                             <p class="text-sm text-gray-400 text-center py-4">{move || i18n.t("dep_post.no_targets")}</p>
                                         }.into_any()
                                     } else {
-                                        let total_count = items.len();
-                                        let posted_count = total_count - new_count;
+                                        let processable_count = items.iter().filter(|(_, _, _, s)| *s != 2).count();
+                                        let posted_count = items.iter().filter(|(_, _, _, s)| *s == 1).count();
+                                        let not_configured = items.iter().filter(|(_, _, _, s)| *s == 2).count();
                                         view! {
                                             <div>
                                                 <div class="grid grid-cols-2 gap-3 mb-3">
                                                     <div class="bg-emerald-50 rounded-lg p-3 text-center">
                                                         <p class="text-xs text-emerald-600">{move || i18n.t("dep_post.target_count")}</p>
-                                                        <p class="text-lg font-bold text-emerald-800">{total_count}</p>
+                                                        <p class="text-lg font-bold text-emerald-800">{processable_count}</p>
                                                         {if posted_count != 0 {
                                                             view! {
                                                                 <p class="text-[10px] text-gray-400 mt-0.5">
@@ -623,19 +665,34 @@ pub fn DepreciationPage() -> impl IntoView {
                                                 </div>
 
                                                 <div class="max-h-60 overflow-y-auto space-y-1">
-                                                    {items.into_iter().map(|(_id, label, amount, already)| {
-                                                        let amount_cls = if already {
+                                                    {items.into_iter().map(|(_id, label, amount, status)| {
+                                                        let is_not_configured = status == 2;
+                                                        let is_posted = status == 1;
+                                                        let amount_cls = if is_posted {
                                                             "text-sm text-gray-400"
+                                                        } else if is_not_configured {
+                                                            "text-sm text-gray-300"
                                                         } else {
                                                             "text-sm font-medium text-gray-900"
                                                         };
+                                                        let row_cls = if is_not_configured {
+                                                            "flex items-center justify-between py-1.5 px-2 rounded bg-gray-50 opacity-50"
+                                                        } else {
+                                                            "flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50"
+                                                        };
                                                         view! {
-                                                            <div class="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-50">
+                                                            <div class=row_cls>
                                                                 <span class="text-xs text-gray-700 truncate flex-1 mr-2">{label}</span>
                                                                 <div class="flex items-center gap-2 shrink-0">
-                                                                    <span class=amount_cls>{format_currency(&amount)}</span>
-                                                                    {if already {
+                                                                    {if !is_not_configured {
+                                                                        view! { <span class=amount_cls>{format_currency(&amount)}</span> }.into_any()
+                                                                    } else {
+                                                                        view! { <span></span> }.into_any()
+                                                                    }}
+                                                                    {if is_posted {
                                                                         view! { <span class="text-[10px] px-1.5 py-0.5 bg-gray-200 text-gray-500 rounded">{i18n.t("dep_post.already_posted")}</span> }.into_any()
+                                                                    } else if is_not_configured {
+                                                                        view! { <span class="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-600 rounded">{i18n.t("dep_post.ifrs_not_set")}</span> }.into_any()
                                                                     } else {
                                                                         view! { <span></span> }.into_any()
                                                                     }}

@@ -43,11 +43,11 @@ pub fn SetupPage() -> impl IntoView {
     view! {
         <div class="min-h-screen bg-gray-50">
             // Header
-            <div class="bg-blue-600 text-white px-6 py-4">
+            <div class="bg-white/80 backdrop-blur-lg border-b border-gray-200/60 px-4 py-3">
                 <div class="flex items-center justify-between max-w-lg mx-auto">
-                    <h1 class="text-lg font-bold">{move || i18n.t("setup.title")}</h1>
+                    <h1 class="text-lg font-bold text-gray-900">{move || i18n.t("setup.title")}</h1>
                     <button
-                        class="text-sm bg-white/20 px-3 py-1 rounded-lg"
+                        class="text-xs text-gray-500 border border-gray-200 px-2.5 py-1 rounded-full active:bg-gray-100 transition-colors"
                         on:click=move |_| {
                             let next = if i18n.current_locale() == "en" { "ja" } else { "en" };
                             i18n.set_locale(next);
@@ -65,7 +65,7 @@ pub fn SetupPage() -> impl IntoView {
                         view! {
                             <div class=move || format!(
                                 "flex-1 h-1.5 rounded-full transition-colors {}",
-                                if step.get() >= s { "bg-blue-600" } else { "bg-gray-200" }
+                                if step.get() >= s { "bg-gray-900" } else { "bg-gray-200" }
                             )></div>
                         }
                     }).collect::<Vec<_>>()}

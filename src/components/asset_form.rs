@@ -87,6 +87,18 @@ pub fn AssetForm(
         initial.as_ref().and_then(|a| a.department_id.clone()).unwrap_or_default()
     );
 
+    // IFRS fields
+    let ifrs_useful_life = RwSignal::new(
+        initial.as_ref().and_then(|a| a.ifrs_useful_life).map(|v| v.to_string()).unwrap_or_default()
+    );
+    let ifrs_salvage_value = RwSignal::new(
+        initial.as_ref().and_then(|a| a.ifrs_salvage_value).map(|v| v.normalize().to_string()).unwrap_or_default()
+    );
+    let ifrs_method = RwSignal::new(
+        initial.as_ref().and_then(|a| a.ifrs_method.clone()).unwrap_or_default()
+    );
+    let show_ifrs = RwSignal::new(false);
+
     let initial_clone = initial.clone();
     let edit_asset_id = initial.as_ref().map(|a| a.id.clone());
 
@@ -120,6 +132,13 @@ pub fn AssetForm(
                     a.tags = tags.get();
                     let dept = department_id.get();
                     a.department_id = if dept.is_empty() { None } else { Some(dept) };
+                    // IFRS fields
+                    let ifrs_ul = ifrs_useful_life.get();
+                    a.ifrs_useful_life = if ifrs_ul.is_empty() { None } else { ifrs_ul.parse().ok() };
+                    let ifrs_sv = ifrs_salvage_value.get();
+                    a.ifrs_salvage_value = if ifrs_sv.is_empty() { None } else { Decimal::from_str(&ifrs_sv).ok() };
+                    let ifrs_m = ifrs_method.get();
+                    a.ifrs_method = if ifrs_m.is_empty() { None } else { Some(ifrs_m) };
                     a.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
                     vec![a]
                 } else {
@@ -157,7 +176,14 @@ pub fn AssetForm(
                             desc.clone(),
                             tags_val.clone(),
                         );
-                        a.department_id = dept_id.clone();
+                    a.department_id = dept_id.clone();
+                        // IFRS fields
+                        let ifrs_ul = ifrs_useful_life.get();
+                        a.ifrs_useful_life = if ifrs_ul.is_empty() { None } else { ifrs_ul.parse().ok() };
+                        let ifrs_sv = ifrs_salvage_value.get();
+                        a.ifrs_salvage_value = if ifrs_sv.is_empty() { None } else { Decimal::from_str(&ifrs_sv).ok() };
+                        let ifrs_m = ifrs_method.get();
+                        a.ifrs_method = if ifrs_m.is_empty() { None } else { Some(ifrs_m.clone()) };
                         a
                     }).collect()
                 };
@@ -449,6 +475,70 @@ pub fn AssetForm(
                     </div>
                     <p class="text-xs text-gray-400 mt-1">{move || i18n.t("asset.prior_depreciation_hint")}</p>
                 </div>
+            </div>
+
+            // IFRS Settings (collapsible)
+            <div class="border border-blue-200 rounded-lg overflow-hidden">
+                <button
+                    type="button"
+                    class="w-full flex items-center justify-between px-3 py-2.5 bg-blue-50 active:bg-blue-100"
+                    on:click=move |_| show_ifrs.update(|v| *v = !*v)
+                >
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold text-blue-700 bg-blue-200 px-1.5 py-0.5 rounded">"IFRS"</span>
+                        <span class="text-xs font-semibold text-blue-800">{move || i18n.t("standard.ifrs_settings")}</span>
+                    </div>
+                    <svg
+                        class=move || format!("w-4 h-4 text-blue-400 transition-transform {}", if show_ifrs.get() { "rotate-180" } else { "" })
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                {move || if show_ifrs.get() {
+                    view! {
+                        <div class="px-3 py-3 space-y-3 bg-white">
+                            <p class="text-[10px] text-gray-400">{move || i18n.t("standard.ifrs_hint")}</p>
+                            // IFRS Useful Life
+                            <div>
+                                <label class="label">{move || format!("{} (IFRS)", i18n.t("asset.useful_life"))}</label>
+                                <input
+                                    type="number"
+                                    class="input-field"
+                                    placeholder=move || i18n.t("standard.same_as_local")
+                                    prop:value=move || ifrs_useful_life.get()
+                                    on:input=move |ev| ifrs_useful_life.set(event_target_value(&ev))
+                                />
+                            </div>
+                            // IFRS Salvage Value
+                            <div>
+                                <label class="label">{move || format!("{} (IFRS)", i18n.t("asset.salvage_value"))}</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    class="input-field"
+                                    placeholder=move || i18n.t("standard.same_as_local")
+                                    prop:value=move || ifrs_salvage_value.get()
+                                    on:input=move |ev| ifrs_salvage_value.set(event_target_value(&ev))
+                                />
+                            </div>
+                            // IFRS Method
+                            <div>
+                                <label class="label">{move || format!("{} (IFRS)", i18n.t("asset.depreciation_method"))}</label>
+                                <select
+                                    class="input-field"
+                                    on:change=move |ev| ifrs_method.set(event_target_value(&ev))
+                                >
+                                    <option value="" selected=move || ifrs_method.get().is_empty()>{move || i18n.t("standard.same_as_local")}</option>
+                                    <option value="SL" selected=move || ifrs_method.get() == "SL">{move || i18n.t("depreciation.straight_line")}</option>
+                                    <option value="DB" selected=move || ifrs_method.get() == "DB">{move || i18n.t("depreciation.declining_balance")}</option>
+                                </select>
+                            </div>
+                        </div>
+                    }.into_any()
+                } else {
+                    view! { <div></div> }.into_any()
+                }}
             </div>
 
             // Location

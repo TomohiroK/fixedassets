@@ -3,6 +3,46 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// Custom serde module for Option<Decimal> to ensure string serialization.
+/// This prevents JavaScript float precision loss when stored in IndexedDB via JSON::parse.
+mod option_decimal_str {
+    use rust_decimal::Decimal;
+    use serde::{self, Deserialize, Deserializer, Serializer};
+    use std::str::FromStr;
+
+    pub fn serialize<S>(value: &Option<Decimal>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match value {
+            Some(d) => serializer.serialize_str(&d.to_string()),
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Decimal>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Accept both string and number formats
+        let opt: Option<serde_json::Value> = Option::deserialize(deserializer)?;
+        match opt {
+            None => Ok(None),
+            Some(serde_json::Value::String(s)) => {
+                if s.is_empty() {
+                    Ok(None)
+                } else {
+                    Decimal::from_str(&s).map(Some).map_err(serde::de::Error::custom)
+                }
+            }
+            Some(serde_json::Value::Number(n)) => {
+                Decimal::from_str(&n.to_string()).map(Some).map_err(serde::de::Error::custom)
+            }
+            Some(_) => Ok(None),
+        }
+    }
+}
+
 /// Record of a single impairment event
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct ImpairmentRecord {
@@ -68,7 +108,7 @@ pub struct Asset {
     #[serde(default)]
     pub disposal_date: Option<String>,
     /// Proceeds — sale price for 売却, scrap value for 除却
-    #[serde(default)]
+    #[serde(default, with = "option_decimal_str")]
     pub disposal_proceeds: Option<Decimal>,
     /// Reason/note for disposal, or buyer name for sale
     #[serde(default)]
@@ -91,6 +131,19 @@ pub struct Asset {
     /// Company ID for multi-tenant isolation
     #[serde(default)]
     pub company_id: String,
+    // ---- IFRS dual-book fields ----
+    /// IFRS useful life (may differ from local/tax useful life)
+    #[serde(default)]
+    pub ifrs_useful_life: Option<u32>,
+    /// IFRS salvage value (serialized as string to avoid JS float precision loss)
+    #[serde(default, with = "option_decimal_str")]
+    pub ifrs_salvage_value: Option<Decimal>,
+    /// IFRS depreciation method (StraightLine, DecliningBalance, UnitsOfProduction)
+    #[serde(default)]
+    pub ifrs_method: Option<String>,
+    /// IFRS depreciation postings (separate from local/tax postings)
+    #[serde(default)]
+    pub ifrs_postings: Vec<DepreciationPosting>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -139,6 +192,10 @@ impl Asset {
             transfers: Vec::new(),
             postings: Vec::new(),
             company_id: String::new(),
+            ifrs_useful_life: None,
+            ifrs_salvage_value: None,
+            ifrs_method: None,
+            ifrs_postings: Vec::new(),
             created_at: now.clone(),
             updated_at: now,
         }
@@ -183,6 +240,47 @@ impl Asset {
 
     pub fn acquisition_date_parsed(&self) -> Option<NaiveDate> {
         NaiveDate::parse_from_str(&self.acquisition_date, "%Y-%m-%d").ok()
+    }
+
+    // ---- IFRS helpers ----
+
+    /// Check if this asset has any IFRS-specific settings configured
+    pub fn has_ifrs_settings(&self) -> bool {
+        self.ifrs_useful_life.is_some()
+            || self.ifrs_salvage_value.is_some()
+            || self.ifrs_method.is_some()
+    }
+
+    /// Get effective useful life for IFRS (falls back to local if not set or 0)
+    pub fn ifrs_useful_life_effective(&self) -> u32 {
+        match self.ifrs_useful_life {
+            Some(v) if v > 0 => v,
+            _ => self.useful_life,
+        }
+    }
+
+    /// Get effective salvage value for IFRS (falls back to local if not set)
+    pub fn ifrs_salvage_value_effective(&self) -> Decimal {
+        self.ifrs_salvage_value.unwrap_or(self.salvage_value)
+    }
+
+    /// Get effective IFRS depreciation method (falls back to local)
+    pub fn ifrs_method_effective(&self) -> DepreciationMethod {
+        match self.ifrs_method.as_deref() {
+            Some("SL") | Some("StraightLine") => DepreciationMethod::StraightLine,
+            Some("DB") | Some("DecliningBalance") => DepreciationMethod::DecliningBalance,
+            _ => self.depreciation_method.clone(),
+        }
+    }
+
+    /// Total posted IFRS depreciation
+    pub fn total_posted_ifrs_depreciation(&self) -> Decimal {
+        self.ifrs_postings.iter().map(|p| p.amount).sum()
+    }
+
+    /// Check if an IFRS posting exists for the given period
+    pub fn has_ifrs_posting(&self, year: u32, month: u32) -> bool {
+        self.ifrs_postings.iter().any(|p| p.year == year && p.month == month)
     }
 }
 

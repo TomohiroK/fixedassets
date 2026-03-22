@@ -689,3 +689,171 @@ pub fn is_postable(asset: &Asset) -> bool {
     }
     true
 }
+
+// ============================================================
+// IFRS Depreciation (IAS 16 / IAS 38)
+// Uses management estimates (useful life, salvage) separate from tax rules.
+// Always SL or simple DB — no country-specific tax adjustments.
+// ============================================================
+
+/// Calculate IFRS depreciation schedule (pure SL or DB, no tax rules)
+pub fn calculate_ifrs_schedule(asset: &Asset) -> Vec<DepreciationScheduleRow> {
+    if is_non_depreciable(&asset.category) {
+        return vec![];
+    }
+    let cost = asset.total_cost();
+    let useful_life = asset.ifrs_useful_life_effective();
+    let salvage = asset.ifrs_salvage_value_effective();
+
+    if useful_life == 0 || cost <= Decimal::ZERO || cost <= salvage {
+        return vec![];
+    }
+
+    let method = asset.ifrs_method_effective();
+    let prior_months = asset.prior_months_total();
+    let depreciable_amount = cost - salvage;
+
+    match method {
+        DepreciationMethod::StraightLine => {
+            let annual_expense = (depreciable_amount / Decimal::from(useful_life)).round_dp(2);
+            let mut rows = Vec::new();
+            let mut opening = cost;
+            let mut accumulated = Decimal::ZERO;
+
+            for year in 1..=useful_life {
+                let remaining = depreciable_amount - accumulated;
+                let expense = if remaining <= Decimal::ZERO {
+                    Decimal::ZERO
+                } else if year == useful_life || annual_expense >= remaining {
+                    remaining.round_dp(2)
+                } else {
+                    annual_expense
+                };
+                let closing = (opening - expense).max(salvage).round_dp(2);
+                let year_end_months = year * 12;
+                let is_prior = year_end_months <= prior_months;
+                rows.push(DepreciationScheduleRow {
+                    year,
+                    opening_value: opening.round_dp(2),
+                    expense: expense.round_dp(2),
+                    closing_value: closing,
+                    is_prior,
+                    label: None,
+                });
+                accumulated += expense;
+                opening = closing;
+            }
+            rows
+        }
+        DepreciationMethod::DecliningBalance => {
+            let rate = Decimal::from(2) / Decimal::from(useful_life);
+            let mut rows = Vec::new();
+            let mut opening = cost;
+
+            for year in 1..=useful_life {
+                let db_expense = (opening * rate).round_dp(2);
+                let expense = if year == useful_life {
+                    (opening - salvage).max(Decimal::ZERO).round_dp(2)
+                } else if opening - db_expense < salvage {
+                    (opening - salvage).max(Decimal::ZERO).round_dp(2)
+                } else {
+                    db_expense
+                };
+                let closing = (opening - expense).max(salvage).round_dp(2);
+                let year_end_months = year * 12;
+                let is_prior = year_end_months <= prior_months;
+                rows.push(DepreciationScheduleRow {
+                    year,
+                    opening_value: opening.round_dp(2),
+                    expense: expense.round_dp(2),
+                    closing_value: closing,
+                    is_prior,
+                    label: None,
+                });
+                opening = closing;
+            }
+            rows
+        }
+    }
+}
+
+/// IFRS accumulated depreciation
+pub fn ifrs_accumulated_depreciation(asset: &Asset, years_elapsed: u32) -> Decimal {
+    let schedule = calculate_ifrs_schedule(asset);
+    schedule.iter().take(years_elapsed as usize).map(|row| row.expense).sum()
+}
+
+/// IFRS annual expense
+pub fn ifrs_current_year_expense(asset: &Asset, years_elapsed: u32) -> Decimal {
+    if is_non_depreciable(&asset.category) {
+        return Decimal::ZERO;
+    }
+    let schedule = calculate_ifrs_schedule(asset);
+    if schedule.is_empty() {
+        return Decimal::ZERO;
+    }
+    let target_year = if years_elapsed == 0 { 1 } else { years_elapsed };
+    schedule.iter()
+        .find(|row| row.year >= target_year && row.expense > Decimal::ZERO)
+        .map(|row| row.expense)
+        .unwrap_or(Decimal::ZERO)
+}
+
+/// IFRS monthly depreciation for a specific period
+pub fn ifrs_monthly_depreciation(asset: &Asset, year: u32, month: u32) -> Decimal {
+    if is_non_depreciable(&asset.category) {
+        return Decimal::ZERO;
+    }
+    if asset.status == AssetStatus::Disposed {
+        if let Some(ref d) = asset.disposal_date {
+            if let Ok(disp) = NaiveDate::parse_from_str(d, "%Y-%m-%d") {
+                let disp_ym = disp.year() as u32 * 12 + disp.month();
+                let target_ym = year * 12 + month;
+                if target_ym > disp_ym {
+                    return Decimal::ZERO;
+                }
+            }
+        }
+    }
+
+    let schedule = calculate_ifrs_schedule(asset);
+    if schedule.is_empty() {
+        return Decimal::ZERO;
+    }
+
+    let acq_date = match NaiveDate::parse_from_str(&asset.acquisition_date, "%Y-%m-%d") {
+        Ok(d) => d,
+        Err(_) => return Decimal::ZERO,
+    };
+
+    let acq_ym = acq_date.year() as u32 * 12 + acq_date.month();
+    let prior_months = asset.prior_months_total();
+    let target_ym = year * 12 + month;
+
+    if target_ym < acq_ym {
+        return Decimal::ZERO;
+    }
+
+    let months_since_acq = target_ym - acq_ym;
+    let total_dep_month = prior_months + months_since_acq;
+    let year_index = total_dep_month / 12;
+
+    let row = match schedule.iter().find(|r| r.year == year_index + 1) {
+        Some(r) => r,
+        None => return Decimal::ZERO,
+    };
+
+    if row.expense == Decimal::ZERO {
+        return Decimal::ZERO;
+    }
+
+    let month_in_year = total_dep_month % 12;
+    let twelve = Decimal::from(12u32);
+    let monthly = (row.expense / twelve).floor();
+
+    if month_in_year == 11 {
+        row.expense - monthly * Decimal::from(11u32)
+    } else {
+        monthly
+    }
+}
