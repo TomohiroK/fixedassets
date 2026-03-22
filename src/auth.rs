@@ -35,6 +35,9 @@ pub struct StoredUser {
     // Legacy field — consumed on first login, then removed
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
+    /// Last login timestamp (ms since epoch) — used for inactive account cleanup
+    #[serde(default)]
+    pub last_login: f64,
 }
 
 // ─── Session with timestamp ─────────────────────────────────────────
@@ -148,6 +151,7 @@ impl AuthState {
             paid: false,
             company_id: company_id.clone(),
             password: None,
+            last_login: now_ms(),
         });
 
         let json = serde_json::to_string(&users).unwrap_or_default();
@@ -180,6 +184,8 @@ impl AuthState {
 
                 if valid {
                     reset_login_attempts();
+                    // Update last_login timestamp
+                    update_last_login(&email);
                     self.login(u.email.clone(), u.name.clone(), u.paid, u.company_id.clone());
                     // Ensure company setup exists (handles cross-browser login)
                     crate::models::company::CompanySetup::ensure_exists();
@@ -357,6 +363,7 @@ fn seed_demo_accounts() {
                 paid: false,
                 company_id: uuid::Uuid::new_v4().to_string(),
                 password: None,
+                last_login: now_ms(),
             }
         })
         .collect();
@@ -506,4 +513,105 @@ fn remove_stored(key: &str) {
             let _ = storage.remove_item(key);
         }
     }
+}
+
+// ─── Last login tracking ────────────────────────────────────────────
+fn update_last_login(email: &str) {
+    let users_json = get_stored_string("fa_users").unwrap_or_else(|| "[]".to_string());
+    let mut users: Vec<StoredUser> = serde_json::from_str(&users_json).unwrap_or_default();
+    let mut changed = false;
+    for user in users.iter_mut() {
+        if user.email == email {
+            user.last_login = now_ms();
+            changed = true;
+        }
+    }
+    if changed {
+        if let Ok(json) = serde_json::to_string(&users) {
+            store_string("fa_users", &json);
+        }
+    }
+}
+
+// ─── Inactive account cleanup job ───────────────────────────────────
+const CLEANUP_LAST_RUN_KEY: &str = "fa_cleanup_last_run";
+const INACTIVE_THRESHOLD_DAYS: f64 = 40.0;
+const CLEANUP_INTERVAL_MS: f64 = 7.0 * 24.0 * 60.0 * 60.0 * 1000.0; // 7 days
+
+/// Weekly cleanup job: removes free accounts inactive for 40+ days.
+/// Runs at most once per week (on Sunday, or if 7+ days since last run).
+/// Skips paid accounts and demo/admin accounts.
+pub fn run_inactive_account_cleanup() {
+    let now = now_ms();
+
+    // Check if it's Sunday (day 0 in JS)
+    let today = js_sys::Date::new_0();
+    let is_sunday = today.get_day() == 0;
+
+    // Check last run time
+    let last_run: f64 = get_stored_string(CLEANUP_LAST_RUN_KEY)
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0.0);
+
+    let elapsed = now - last_run;
+
+    // Only run on Sundays, and at most once per 7 days
+    if !is_sunday || elapsed < CLEANUP_INTERVAL_MS {
+        return;
+    }
+
+    let users_json = get_stored_string("fa_users").unwrap_or_else(|| "[]".to_string());
+    let users: Vec<StoredUser> = serde_json::from_str(&users_json).unwrap_or_default();
+
+    let threshold_ms = INACTIVE_THRESHOLD_DAYS * 24.0 * 60.0 * 60.0 * 1000.0;
+    let mut removed_company_ids: Vec<String> = Vec::new();
+
+    let remaining: Vec<StoredUser> = users
+        .into_iter()
+        .filter(|u| {
+            // Keep paid accounts
+            if u.paid {
+                return true;
+            }
+            // Keep accounts with no last_login set (legacy — treat as active)
+            if u.last_login == 0.0 {
+                return true;
+            }
+            // Check if inactive for 40+ days
+            let inactive_ms = now - u.last_login;
+            if inactive_ms > threshold_ms {
+                removed_company_ids.push(u.company_id.clone());
+                false // Remove
+            } else {
+                true // Keep
+            }
+        })
+        .collect();
+
+    if !removed_company_ids.is_empty() {
+        // Save updated user list
+        if let Ok(json) = serde_json::to_string(&remaining) {
+            store_string("fa_users", &json);
+        }
+
+        // Clean up associated company setup data
+        if let Some(window) = web_sys::window() {
+            if let Ok(Some(storage)) = window.local_storage() {
+                for cid in &removed_company_ids {
+                    let key = format!("fa_company_setup_{}", cid);
+                    let _ = storage.remove_item(&key);
+                }
+            }
+        }
+
+        web_sys::console::log_1(
+            &format!(
+                "[FixedAssets] Cleanup: removed {} inactive free account(s)",
+                removed_company_ids.len()
+            ).into()
+        );
+    }
+
+    // Record last run time
+    store_string(CLEANUP_LAST_RUN_KEY, &now.to_string());
 }

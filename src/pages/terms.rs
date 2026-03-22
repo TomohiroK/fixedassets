@@ -80,6 +80,10 @@ pub fn TermsPage() -> impl IntoView {
                                 <strong>"Account Security: "</strong>
                                 "You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account."
                             </li>
+                            <li>
+                                <strong>"Inactive Account Deletion: "</strong>
+                                "Free (unpaid) accounts that have not been logged into for thirty-five (35) or more consecutive days may be automatically deleted without prior notice. All data associated with the deleted account, including asset records and company settings, will be permanently removed. Paid accounts are exempt from this policy. Users who wish to retain their data should log in periodically or upgrade to a paid plan."
+                            </li>
                         </ul>
                     </Section>
 
@@ -164,8 +168,11 @@ pub fn TermsPage() -> impl IntoView {
 
                     // Section 8
                     <Section number="8" title="Termination">
-                        <p class="terms-text">
+                        <p class="terms-text mb-3">
                             "We reserve the right to suspend or terminate your account if you violate these Terms, including the \"one account per entity per country\" rule."
+                        </p>
+                        <p class="terms-text">
+                            "In addition, free accounts that remain inactive (no login) for thirty-five (35) or more consecutive days will be automatically deleted along with all associated data. This automated process runs periodically and does not require prior notice. To avoid deletion, users should either log in regularly or upgrade to a paid plan."
                         </p>
                     </Section>
 

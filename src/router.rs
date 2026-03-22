@@ -32,7 +32,7 @@ pub fn AppRouter() -> impl IntoView {
                 <Route path=path!("/welcome") view=GeoRedirectLanding />
                 <Route path=path!("/login") view=LoginPage />
                 <Route path=path!("/signup") view=SignupPage />
-                <Route path=path!("/admin") view=AdminPage />
+                <Route path=path!("/admin") view=GuardedAdmin />
                 <Route path=path!("/terms") view=TermsPage />
                 <Route path=path!("/report") view=ReportPage />
                 <Route path=path!("/setup") view=SetupGuardedSetup />
@@ -172,6 +172,23 @@ fn GuardedSettings() -> impl IntoView {
             view! { <SetupPage /> }.into_any()
         } else {
             view! { <PageShell><SettingsPage /></PageShell> }.into_any()
+        }}
+    }
+}
+
+#[component]
+fn GuardedAdmin() -> impl IntoView {
+    let auth = use_auth();
+    view! {
+        {move || {
+            let is_admin = auth.user.get()
+                .map(|u| u.email == "admin@example.com")
+                .unwrap_or(false);
+            if is_admin {
+                view! { <AdminPage /> }.into_any()
+            } else {
+                view! { <LandingPage /> }.into_any()
+            }
         }}
     }
 }

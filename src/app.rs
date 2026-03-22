@@ -15,6 +15,9 @@ pub fn App() -> impl IntoView {
     provide_context(auth);
     provide_context(standard);
 
+    // Weekly cleanup: remove free accounts inactive for 40+ days (runs on Sundays)
+    crate::auth::run_inactive_account_cleanup();
+
     // Check data version — if mismatch, reset all data (acts as "server reset")
     if asset_store::needs_data_reset() {
         leptos::task::spawn_local(async move {
