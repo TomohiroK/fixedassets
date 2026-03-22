@@ -216,6 +216,42 @@ pub async fn save_asset(asset: &Asset) -> Result<(), String> {
     Ok(())
 }
 
+/// Batch save multiple assets in a single IndexedDB transaction for performance
+async fn batch_save_assets(assets: &[Asset]) -> Result<(), String> {
+    if assets.is_empty() {
+        return Ok(());
+    }
+    let db = open_db().await?;
+    let transaction = db
+        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readwrite)
+        .map_err(|e| format!("Transaction error: {:?}", e))?;
+    let store = transaction
+        .object_store(STORE_NAME)
+        .map_err(|e| format!("Store error: {:?}", e))?;
+
+    let company_id = get_current_company_id();
+    for asset in assets {
+        let mut asset = asset.clone();
+        if asset.company_id.is_empty() {
+            asset.company_id = company_id.clone();
+        }
+        let json = serde_json::to_string(&asset).map_err(|e| format!("Serialize error: {}", e))?;
+        let js_value = js_sys::JSON::parse(&json).map_err(|e| format!("JSON parse error: {:?}", e))?;
+        store.put(&js_value).map_err(|e| format!("Put error: {:?}", e))?;
+    }
+
+    // Wait for the single transaction to complete
+    let (tx, rx) = futures_channel::oneshot::channel::<Result<(), String>>();
+    let on_complete = Closure::once(move |_: web_sys::Event| {
+        let _ = tx.send(Ok(()));
+    });
+    transaction.set_oncomplete(Some(on_complete.as_ref().unchecked_ref()));
+    on_complete.forget();
+    rx.await.map_err(|_| "Channel error".to_string())??;
+
+    Ok(())
+}
+
 pub async fn get_all_assets() -> Result<Vec<Asset>, String> {
     let db = open_db().await?;
     let transaction = db
@@ -305,10 +341,50 @@ pub async fn delete_asset(id: &str) -> Result<(), String> {
 
 pub async fn clear_all_assets() -> Result<(), String> {
     // Only delete assets belonging to the current company
-    let assets = get_all_assets().await?;
-    for asset in &assets {
-        delete_asset(&asset.id).await?;
+    let company_id = get_current_company_id();
+    let db = open_db().await?;
+    let transaction = db
+        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readwrite)
+        .map_err(|e| format!("Transaction error: {:?}", e))?;
+    let store = transaction
+        .object_store(STORE_NAME)
+        .map_err(|e| format!("Store error: {:?}", e))?;
+
+    // Get all assets in a single read
+    let request = store
+        .get_all()
+        .map_err(|e| format!("GetAll error: {:?}", e))?;
+    let rx = idb_request_to_future(&request);
+    let result = rx.await.map_err(|_| "Channel error".to_string())??;
+
+    let array: Array = result.unchecked_into();
+    // Delete only assets belonging to current company in same transaction
+    for i in 0..array.length() {
+        let item = array.get(i);
+        // Check company_id field
+        let cid = js_sys::Reflect::get(&item, &JsValue::from_str("company_id"))
+            .ok()
+            .and_then(|v| v.as_string())
+            .unwrap_or_default();
+        if cid == company_id || cid.is_empty() {
+            if let Some(id) = js_sys::Reflect::get(&item, &JsValue::from_str("id"))
+                .ok()
+                .and_then(|v| v.as_string())
+            {
+                let _ = store.delete(&JsValue::from_str(&id));
+            }
+        }
     }
+
+    // Wait for transaction to complete
+    let (tx, rx) = futures_channel::oneshot::channel::<Result<(), String>>();
+    let on_complete = Closure::once(move |_: web_sys::Event| {
+        let _ = tx.send(Ok(()));
+    });
+    transaction.set_oncomplete(Some(on_complete.as_ref().unchecked_ref()));
+    on_complete.forget();
+    rx.await.map_err(|_| "Channel error".to_string())??;
+
     Ok(())
 }
 
@@ -341,9 +417,7 @@ pub async fn import_assets(json: &str) -> Result<usize, String> {
     }
 
     let count = assets.len();
-    for asset in &assets {
-        save_asset(asset).await?;
-    }
+    batch_save_assets(&assets).await?;
     Ok(count)
 }
 
@@ -416,6 +490,7 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
     }
 
     let mut count = 0;
+    let mut collected_assets: Vec<Asset> = Vec::new();
     for (line_num, line) in lines.enumerate() {
         let line = line.trim();
         if line.is_empty() {
@@ -521,7 +596,7 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
             asset.ifrs_salvage_value = ifrs_salvage_value;
             asset.ifrs_method = ifrs_method.clone();
 
-            save_asset(&asset).await?;
+            collected_assets.push(asset);
             count += 1;
             if count > MAX_IMPORT_ASSETS {
                 return Err(format!("Too many rows. Maximum {} assets per import.", MAX_IMPORT_ASSETS));
@@ -529,6 +604,7 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
         }
     }
 
+    batch_save_assets(&collected_assets).await?;
     Ok(count)
 }
 

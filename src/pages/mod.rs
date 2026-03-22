@@ -3,6 +3,8 @@ pub mod asset_list;
 pub mod asset_register;
 pub mod asset_detail;
 pub mod settings;
+pub mod settings_account;
+pub mod settings_department;
 pub mod landing;
 pub mod country_landing;
 pub mod login;

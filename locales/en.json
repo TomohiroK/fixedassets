@@ -34,7 +34,17 @@
     "password_too_short": "Password must be at least 8 characters",
     "password_weak": "Password must contain uppercase, lowercase, and a number",
     "agree_tos_prefix": "I agree to the",
-    "agree_tos_required": "You must agree to the Terms of Service"
+    "agree_tos_required": "You must agree to the Terms of Service",
+    "edit_account": "Edit Account",
+    "new_password": "New Password",
+    "new_password_hint": "Leave blank to keep current password",
+    "current_password": "Current Password",
+    "current_password_required": "Enter current password to save changes",
+    "save_changes": "Save Changes",
+    "cancel": "Cancel",
+    "update_success": "Account updated successfully",
+    "update_error_wrong_password": "Current password is incorrect",
+    "email_taken": "This email is already in use"
   },
   "admin": {
     "title": "Admin Panel",

@@ -222,6 +222,81 @@ impl AuthState {
         true
     }
 
+    /// Update account: name, email, and optionally password.
+    /// Requires current_password for verification.
+    /// new_password can be empty/None to keep current password.
+    pub fn update_account(
+        &self,
+        current_password: String,
+        new_name: String,
+        new_email: String,
+        new_password: Option<String>,
+    ) -> Result<(), String> {
+        let current_user = self.user.get().ok_or("Not logged in")?;
+        let current_email = current_user.email.clone();
+
+        let users_json = get_stored_string("fa_users").unwrap_or_else(|| "[]".to_string());
+        let mut users: Vec<StoredUser> = serde_json::from_str(&users_json).unwrap_or_default();
+
+        // Find current user and verify password
+        let user_idx = users.iter().position(|u| u.email == current_email)
+            .ok_or("User not found")?;
+
+        let valid = if !users[user_idx].password_hash.is_empty() {
+            verify_password(&current_password, &users[user_idx].salt, &users[user_idx].password_hash)
+        } else if let Some(ref legacy_pw) = users[user_idx].password {
+            legacy_pw == &current_password
+        } else {
+            false
+        };
+
+        if !valid {
+            return Err("wrong_password".to_string());
+        }
+
+        // Check if new email is taken by another user
+        if new_email != current_email {
+            if users.iter().any(|u| u.email == new_email && u.email != current_email) {
+                return Err("email_taken".to_string());
+            }
+        }
+
+        // Validate new password if provided
+        if let Some(ref pw) = new_password {
+            if !pw.is_empty() {
+                validate_password_strength(pw)?;
+            }
+        }
+
+        // Apply changes
+        users[user_idx].name = new_name.clone();
+        users[user_idx].email = new_email.clone();
+
+        if let Some(ref pw) = new_password {
+            if !pw.is_empty() {
+                let salt = generate_salt();
+                users[user_idx].password_hash = hash_password(pw, &salt);
+                users[user_idx].salt = salt;
+                users[user_idx].password = None;
+            }
+        }
+
+        // Save users
+        if let Ok(json) = serde_json::to_string(&users) {
+            store_string("fa_users", &json);
+        }
+
+        // Update session
+        self.login(
+            new_email,
+            new_name,
+            users[user_idx].paid,
+            users[user_idx].company_id.clone(),
+        );
+
+        Ok(())
+    }
+
     pub fn logout(&self) {
         // Clear session
         remove_stored("fa_user");
