@@ -285,6 +285,45 @@ impl CompanySetup {
         }
     }
 
+    /// Ensure CompanySetup exists for the current user.
+    /// If not found, tries to copy from any existing setup in localStorage.
+    /// If none found at all, creates a default setup (Japan / JPY).
+    pub fn ensure_exists() {
+        if Self::load().is_some() {
+            return;
+        }
+
+        // Try to find any existing fa_company_setup_* in localStorage
+        if let Some(window) = web_sys::window() {
+            if let Ok(Some(storage)) = window.local_storage() {
+                let len = storage.length().unwrap_or(0);
+                for i in 0..len {
+                    if let Ok(Some(key)) = storage.key(i) {
+                        if key.starts_with("fa_company_setup") && key != "fa_company_setup" {
+                            if let Ok(Some(json)) = storage.get_item(&key) {
+                                if let Ok(existing) = serde_json::from_str::<CompanySetup>(&json) {
+                                    // Found an existing setup — copy it for this company_id
+                                    existing.save();
+                                    crate::stores::asset_store::mark_data_version_current();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // No existing setup found — create default
+        let default_setup = CompanySetup {
+            company_name: "My Company".to_string(),
+            country_code: "JP".to_string(),
+            currency_code: "JPY".to_string(),
+        };
+        default_setup.save();
+        crate::stores::asset_store::mark_data_version_current();
+    }
+
     pub fn country(&self) -> Option<AseanCountry> {
         AseanCountry::from_code(&self.country_code)
     }

@@ -79,7 +79,7 @@ pub fn SignupPage() -> impl IntoView {
                                 return;
                             }
 
-                            match auth.signup(name.get(), email.get(), password.get()) {
+                            match auth.signup(email.get(), name.get(), password.get()) {
                                 Ok(()) => {
                                     nav("/", Default::default());
                                 }

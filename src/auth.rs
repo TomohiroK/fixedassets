@@ -181,6 +181,8 @@ impl AuthState {
                 if valid {
                     reset_login_attempts();
                     self.login(u.email.clone(), u.name.clone(), u.paid, u.company_id.clone());
+                    // Ensure company setup exists (handles cross-browser login)
+                    crate::models::company::CompanySetup::ensure_exists();
                     Ok(())
                 } else {
                     record_failed_attempt();
