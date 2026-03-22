@@ -89,7 +89,11 @@ pub fn LandingPage() -> impl IntoView {
 
                         // Footer
                         <div class="text-center mt-6 text-white/50 text-xs space-y-1">
-                            <p><a href="/terms" class="underline hover:text-white/70">"Terms of Service"</a></p>
+                            <p>
+                                <a href="/terms" class="underline hover:text-white/70">"Terms of Service"</a>
+                                " · "
+                                <a href="/report" class="underline hover:text-white/70">"Contact"</a>
+                            </p>
                             <p>{move || i18n.t("landing.footer")}</p>
                         </div>
                     </div>

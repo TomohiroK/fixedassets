@@ -20,6 +20,7 @@ use crate::pages::{
     setup::SetupPage,
     terms::TermsPage,
     depreciation::DepreciationPage,
+    report::ReportPage,
 };
 
 #[component]
@@ -33,6 +34,7 @@ pub fn AppRouter() -> impl IntoView {
                 <Route path=path!("/signup") view=SignupPage />
                 <Route path=path!("/admin") view=AdminPage />
                 <Route path=path!("/terms") view=TermsPage />
+                <Route path=path!("/report") view=ReportPage />
                 <Route path=path!("/setup") view=SetupGuardedSetup />
 
                 // Country-specific SEO landing pages
