@@ -3,6 +3,11 @@
 ASEAN 11ヶ国 + 日本対応の固定資産管理システム。モバイルファースト設計のWebアプリケーション。
 
 **Production URL**: https://fixedassets.vercel.app
+**Landing Page**: https://fixedassets.vercel.app/lp
+
+## What is FixedAssets?
+
+> **FixedAssets** は、Rust/WebAssembly（Leptos 0.7 CSR）と Tailwind CSS で構築されたモバイルファーストの固定資産管理Webアプリケーションであり、日本を含むASEAN 11ヶ国（シンガポール・マレーシア・タイ・インドネシア・フィリピン・ベトナム・ミャンマー・カンボジア・ラオス・ブルネイ）の国別償却規則（日本の200%定率法＋保証率切替、シンガポール/マレーシアのCapital Allowance IA+AA、インドネシアのPMK-72/2023グループ別税率、ベトナムの150%/200%定率法、タイ・フィリピン・ラオス・カンボジア・ブルネイのDDB、ミャンマーの定額法のみ）と13通貨（JPY・USD・CNY・SGD・MYR・THB・IDR・PHP・VND・MMK・KHR・LAK・BND）に対応し、15カテゴリ（土地・建物・建物附属設備・構築物・機械装置・工具器具備品・車両運搬具・リース資産・建設仮勘定・特許権・商標権・借地権・ソフトウェア・施設利用権・その他）の資産をCRUD管理（数量指定による連番付き一括登録、全文検索＋カテゴリフィルタ、タグ管理最大50個、写真の複数アップロード・WebP自動圧縮・サムネイル生成）でき、ローカル税務基準とIFRSのデュアルブック（資産ごとに独立したIFRS耐用年数・残存価額・償却方法の設定、国別税務ルールを適用しない純粋SL/DB計算、独立した月次償却実績ifrs_postings、IFRS未設定資産の自動スキップ、トグルスイッチによる表示切替）を備え、月次償却処理（一括・カテゴリ別・個別の3範囲、カレンダーUIによる年月指定、プレビュー確認、当月実行・当月/前月取消・全取消の3アクション、同月二重処理防止、全処理済み時のボタン無効化）とカテゴリ別償却集計（任意時点での取得価額・償却累計額・帳簿価額・進捗バー表示、Local/IFRS連動）を提供し、資産ライフサイクル管理として減損処理（日付・金額・理由の記録、複数回対応、累計自動計算、帳簿価額超過バリデーション）、資本的支出CapEx（日付・金額・説明の記録、取得価額加算、残存耐用年数での再計算）、除却（通常・災害・盗難の3区分、除却日・収入・理由の記録、損益自動計算、取消可能）と売却（売却日・売却先・売却額の記録、売却損益自動計算）、建設仮勘定CIPから本勘定への振替（カテゴリ・耐用年数・償却方法・残存価額の再設定、振替日からの償却開始）、部門間移動（異動日・理由・移動元/先の履歴管理）を持ち、部門マスタ管理（コード＋名称の登録・編集・削除、資産割当、インポート時の自動マッチング）を備え、CSV 19列（資産番号・名称・カテゴリ・取得日・取得価額・残存価額・耐用年数・償却方法・場所・説明・既償却年数・既償却月数・ステータス・タグ・部門・数量・IFRS耐用年数・IFRS残存価額・IFRS償却方法）とJSONの双方向インポート/エクスポート（テンプレートDL、一括数量対応、5MB/10,000件上限、行単位エラーメッセージ）に対応し、ダッシュボード（総資産数・総取得価額・簿価合計・使用中/除却済み件数・カテゴリ別内訳と割合バー）を表示し、認証機能としてSHA-256＋ソルトによるパスワードハッシュ、8文字以上＋大文字小文字数字のパスワード強度要求、5回失敗15分ロックアウトのレート制限、30分非操作セッションタイムアウト、company_idによるマルチテナントデータ分離、無料プラン（資産5件・部門1つまで）/有料プラン（無制限）の管理、管理者パネル（全アカウント一覧・プラン切替・代理ログイン・パスワード認証）を備え、DATA_VERSIONメカニズムによるデプロイ時の全クライアント自動データリセット、設定画面からの全データクリア（確認付き）と国変更（データリセットを伴う）、英語/日本語の200以上の翻訳キーによる多言語対応（ヘッダーおよび設定画面での切替、localStorageへの保存）、rust_decimalによる高精度金額計算（Option\<Decimal\>のカスタムserde文字列シリアライズでJS浮動小数点精度損失を回避）、IndexedDB v2（assets・photosオブジェクトストア）とlocalStorage（会社設定・部門・セッション・言語・会計基準）によるクライアントサイドデータ永続化、Vercelへの静的SPAデプロイ（CSP・X-Frame-Options DENY・HSTS・X-Content-Type-Options nosniff等のセキュリティヘッダー、WASMの長期キャッシュ、SPAフォールバックリライト、オプショナルBasic認証）、OGP/Twitterカード/JSON-LD構造化データのSEOメタタグ、11ヶ国別SEOランディングページ（ジオリダイレクト付き）＋専用LPページ（/lp）、利用規約ページ、デモアカウント3件の自動シード、LTO＋opt-level=zによるWASMサイズ最適化ビルドを備えた、包括的な固定資産管理システムである。
 
 ## Tech Stack
 
@@ -89,7 +94,7 @@ ASEAN 11ヶ国 + 日本対応の固定資産管理システム。モバイルフ
 - **一括数量対応** — CSV1行で数量指定 → 連番付き複数資産を自動生成
 - **バリデーション** — ファイルサイズ上限5MB、最大10,000件、行単位のエラーメッセージ
 
-### Multi-Country Support (12ヶ国対応)
+### Multi-Country Support (11ヶ国対応)
 
 | 国 | 通貨 | 償却方式 |
 |----|------|----------|
@@ -122,6 +127,26 @@ ASEAN 11ヶ国 + 日本対応の固定資産管理システム。モバイルフ
 - **DATA_VERSION** — アプリバージョンを上げてデプロイするだけで全クライアントのデータを自動リセット
 - **データリセット** — 設定画面から全データクリア（確認ダイアログ付き）
 - **国変更** — 設定画面から国・通貨を変更（データリセットを伴う）
+
+### Dashboard
+
+- **サマリーカード** — 総資産数、取得価額合計、帳簿価額合計、使用中/除却済み件数
+- **カテゴリ別内訳** — 各カテゴリの資産数と割合バーを表示
+- **クイックリンク** — 償却処理ページへの直接遷移
+
+### Pages & Navigation
+
+- **ランディングページ** — `/welcome` (モバイルLP) + `/lp` (専用フルLP)
+- **11ヶ国別SEOランディングページ** — `/japan`, `/singapore`, `/malaysia` 等（ジオリダイレクト付き）
+- **ボトムナビゲーション** — ダッシュボード・資産一覧・登録・設定の4タブ
+- **利用規約** — `/terms`
+- **管理者パネル** — `/admin`
+
+### i18n
+
+- **英語 / 日本語** — 200以上の翻訳キー
+- **ヘッダーおよび設定画面から切替**
+- **localStorageに保存**
 
 ## Demo Accounts
 
@@ -190,47 +215,56 @@ Basic認証はVercel環境変数で管理。未設定の場合はスキップさ
 fixedassets/
 ├── Cargo.toml              # Rust dependencies
 ├── Trunk.toml              # Trunk build config
-├── index.html              # Entry point
+├── index.html              # Entry point (SPA)
 ├── input.css               # Tailwind CSS source
 ├── tailwind.config.js      # Tailwind config
-├── vercel.json             # Vercel config
+├── vercel.json             # Vercel config (rewrites, headers, CSP)
 ├── sample_import.csv       # Sample CSV import file (19 columns, IFRS included)
+├── public/
+│   └── lp.html             # Dedicated landing page (static HTML + Tailwind CDN)
+├── scripts/
+│   └── deploy.sh           # Build + deploy script (Trunk → Vercel prebuilt)
 ├── locales/
-│   ├── en.json             # English translations
-│   └── ja.json             # Japanese translations
+│   ├── en.json             # English translations (200+ keys)
+│   └── ja.json             # Japanese translations (200+ keys)
 ├── docs/rules/             # Country-specific depreciation rules
 └── src/
     ├── main.rs             # Entry point
     ├── app.rs              # Root component + data version check + AccountingStandard context
-    ├── router.rs           # Client-side routing (12 routes)
-    ├── auth.rs             # Authentication (SHA-256, rate limiting)
+    ├── router.rs           # Client-side routing (20+ routes including country SEO pages)
+    ├── auth.rs             # Authentication (SHA-256, rate limiting, session timeout)
     ├── i18n.rs             # i18n (EN/JA)
     ├── models/
-    │   ├── asset.rs        # Asset, DepreciationPosting, ImpairmentRecord, CapExRecord, TransferRecord, IFRS fields
-    │   ├── depreciation.rs # Schedule calculation, monthly posting, country-specific methods, IFRS calculation
-    │   ├── accounting_standard.rs # AccountingStandard enum (Local/IFRS), global signal context
-    │   ├── company.rs      # CompanySetup, AseanCountry, Currency
+    │   ├── asset.rs        # Asset struct, IFRS dual-book fields, Option<Decimal> custom serde
+    │   ├── depreciation.rs # Schedule calculation, monthly posting, country methods, IFRS calc
+    │   ├── accounting_standard.rs # AccountingStandard enum (Local/IFRS), global signal
+    │   ├── company.rs      # CompanySetup, AseanCountry (11), Currency (13)
     │   ├── country_rules.rs # Country-specific depreciation rules & rates
-    │   └── department.rs   # Department master
+    │   ├── department.rs   # Department master
+    │   └── photo.rs        # Asset photo model
     ├── stores/
-    │   └── asset_store.rs  # IndexedDB CRUD, CSV/JSON import/export (IFRS columns), data versioning
+    │   ├── asset_store.rs  # IndexedDB CRUD, CSV/JSON import/export (IFRS columns), DATA_VERSION
+    │   └── photo_store.rs  # Photo IndexedDB operations
     ├── components/
-    │   ├── common.rs       # Shared UI (LoadingSpinner, ConfirmDialog, StandardToggle, format_currency)
-    │   ├── asset_detail.rs # Asset detail view (Local/IFRS aware financial summary & schedule)
-    │   ├── asset_form.rs   # Asset registration/edit form (with IFRS settings, department & quantity)
-    │   ├── dashboard.rs    # Dashboard summary cards
-    │   └── modals/         # Dispose, Sell, Impairment, CapEx, CIP Transfer, Department Transfer modals
+    │   ├── common.rs       # LoadingSpinner, ConfirmDialog, StandardToggle, format_currency
+    │   ├── asset_detail.rs # Asset detail view (Local/IFRS aware)
+    │   ├── asset_form.rs   # Asset form (with IFRS settings, department, quantity, batch)
+    │   ├── dashboard.rs    # Dashboard summary cards & category breakdown
+    │   ├── layout.rs       # Header, BottomNav, PageShell
+    │   └── modals/         # Dispose, Sell, Impairment, CapEx, CIP Transfer, Dept Transfer
     └── pages/
         ├── dashboard.rs    # Dashboard page
-        ├── asset_list.rs   # Asset list with search & filters
+        ├── asset_list.rs   # Asset list with search & category filters
         ├── asset_detail.rs # Asset detail page
         ├── asset_register.rs # Registration page
-        ├── depreciation.rs # Depreciation processing & category summary (Local/IFRS dual-book)
-        ├── settings.rs     # Settings, import/export, department master
-        ├── setup.rs        # Initial company setup
+        ├── depreciation.rs # Depreciation processing + category summary (Dual Book)
+        ├── settings.rs     # Settings, import/export, department master, data management
+        ├── setup.rs        # Initial company setup (country, currency, company name)
         ├── login.rs        # Login page
-        ├── signup.rs       # Signup page
-        ├── admin.rs        # Admin panel
+        ├── signup.rs       # Signup page (password strength validation)
+        ├── admin.rs        # Admin panel (user management, plan toggle)
+        ├── landing.rs      # Mobile landing page
+        ├── country_landing.rs # 11 country-specific SEO landing pages
         └── terms.rs        # Terms of service
 ```
 

@@ -12,6 +12,11 @@ mkdir -p .vercel/output/functions/_middleware.func
 # Copy static files
 cp -r dist/* .vercel/output/static/
 
+# Copy public directory (LP page, etc.)
+if [ -d "public" ]; then
+  cp -r public/* .vercel/output/static/
+fi
+
 # Create Vercel config with middleware route
 cat > .vercel/output/config.json << 'EOF'
 {
@@ -20,6 +25,7 @@ cat > .vercel/output/config.json << 'EOF'
     { "src": "/(.*)", "middlewarePath": "_middleware", "continue": true },
     { "handle": "filesystem" },
     { "src": "/(.*\\.wasm)", "headers": { "Content-Type": "application/wasm", "Cache-Control": "public, max-age=31536000, immutable" }, "continue": true },
+    { "src": "/lp", "dest": "/lp.html" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

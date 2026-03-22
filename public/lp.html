@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixedAssets - ASEAN & Japan Fixed Asset Management</title>
+    <meta name="description" content="High-performance fixed asset management for Japan and 11 ASEAN countries. Local tax depreciation rules, IFRS dual-book, powered by Rust & WebAssembly.">
+    <meta property="og:title" content="FixedAssets - ASEAN & Japan Fixed Asset Management">
+    <meta property="og:description" content="Built for precision and compliance across Southeast Asia and Japan. Local tax rules for 11 nations plus IFRS Dual Book.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://fixedassets.vercel.app/lp">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        h1, h2, h3, h4, h5, h6 { font-family: 'Space Grotesk', system-ui, sans-serif; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .gradient-text { background: linear-gradient(135deg, #0d9488 0%, #0ea5e9 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-glow { background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(13, 148, 136, 0.15), transparent); }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        .float-animation { animation: float 6s ease-in-out infinite; }
+        .card-hover { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 60px -15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-slate-100">
+        <nav class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 bg-teal-600 rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
+                    </svg>
+                </div>
+                <span class="text-xl font-bold text-slate-900">FixedAssets</span>
+            </div>
+            <div class="hidden lg:flex items-center gap-8 text-sm text-slate-600">
+                <a href="#features" class="hover:text-slate-900 transition">Features</a>
+                <a href="#countries" class="hover:text-slate-900 transition">Countries</a>
+                <a href="#pricing" class="hover:text-slate-900 transition">Pricing</a>
+                <a href="#security" class="hover:text-slate-900 transition">Security</a>
+            </div>
+            <div class="hidden lg:flex items-center gap-3">
+                <a href="/login" class="text-sm text-slate-700 hover:text-slate-900 transition px-4 py-2">Login</a>
+                <a href="/signup" class="text-sm px-5 py-2.5 rounded-full font-semibold text-white bg-teal-600 hover:bg-teal-700 transition shadow-sm">Get Started</a>
+            </div>
+            <!-- Mobile -->
+            <div class="flex lg:hidden items-center gap-3">
+                <a href="/login" class="text-sm px-4 py-1.5 rounded-full font-medium text-slate-700 border border-slate-200">Login</a>
+                <a href="/signup" class="text-sm px-4 py-1.5 rounded-full font-semibold text-white bg-teal-600">Start</a>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Hero -->
+        <section class="relative py-20 md:py-28 lg:py-36 hero-glow overflow-hidden">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+                    <div class="space-y-8 text-center lg:text-left">
+                        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium text-teal-700 bg-teal-50 border border-teal-100">
+                            <span class="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></span>
+                            Regional Fixed Assets Powerhouse
+                        </div>
+                        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-[1.1] tracking-tight">
+                            ASEAN & Japan<br/>
+                            <span class="gradient-text">Fixed Asset</span><br/>
+                            Management.
+                        </h1>
+                        <p class="text-lg text-slate-600 leading-relaxed max-w-xl mx-auto lg:mx-0">
+                            Built for precision and performance across Southeast Asia and Japan.
+                            Local tax rules for 11 nations plus IFRS Dual Book, powered by
+                            Rust & WebAssembly for zero-loss accuracy.
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                            <a href="/signup" class="group px-8 py-3.5 rounded-full font-semibold text-white bg-teal-600 hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 flex items-center justify-center gap-2">
+                                Get Started Free
+                                <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                                </svg>
+                            </a>
+                            <a href="/login" class="px-8 py-3.5 rounded-full font-semibold text-slate-700 bg-white border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Try Demo
+                            </a>
+                        </div>
+                        <div class="flex items-center gap-6 justify-center lg:justify-start text-sm text-slate-500">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-teal-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                No credit card
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-teal-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                5 assets free
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-teal-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                EN / JA
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Hero visual -->
+                    <div class="relative hidden lg:block">
+                        <div class="relative float-animation">
+                            <div class="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 space-y-4">
+                                <!-- Mini dashboard mockup -->
+                                <div class="flex items-center gap-3 mb-6">
+                                    <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/></svg>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-900">Dashboard</div>
+                                        <div class="text-xs text-slate-500">Total Assets: 247</div>
+                                    </div>
+                                    <div class="ml-auto flex gap-1">
+                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Local</span>
+                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">IFRS</span>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div class="bg-slate-50 rounded-xl p-3 text-center">
+                                        <div class="text-lg font-bold text-slate-900">247</div>
+                                        <div class="text-[10px] text-slate-500">Total</div>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-xl p-3 text-center">
+                                        <div class="text-lg font-bold text-teal-600">$4.2M</div>
+                                        <div class="text-[10px] text-slate-500">Book Value</div>
+                                    </div>
+                                    <div class="bg-slate-50 rounded-xl p-3 text-center">
+                                        <div class="text-lg font-bold text-slate-900">11</div>
+                                        <div class="text-[10px] text-slate-500">Countries</div>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="text-slate-500 w-24">Buildings</span>
+                                        <div class="flex-1 bg-slate-100 rounded-full h-2"><div class="bg-teal-500 h-2 rounded-full" style="width:72%"></div></div>
+                                        <span class="text-slate-600 font-medium">72%</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="text-slate-500 w-24">Vehicles</span>
+                                        <div class="flex-1 bg-slate-100 rounded-full h-2"><div class="bg-sky-500 h-2 rounded-full" style="width:45%"></div></div>
+                                        <span class="text-slate-600 font-medium">45%</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-xs">
+                                        <span class="text-slate-500 w-24">Software</span>
+                                        <div class="flex-1 bg-slate-100 rounded-full h-2"><div class="bg-violet-500 h-2 rounded-full" style="width:88%"></div></div>
+                                        <span class="text-slate-600 font-medium">88%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Floating badge -->
+                            <div class="absolute -top-4 -right-4 bg-white rounded-2xl shadow-lg border border-slate-100 px-4 py-3 flex items-center gap-2">
+                                <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-lg">&#9889;</div>
+                                <div>
+                                    <div class="text-xs font-bold text-slate-900">Rust + WASM</div>
+                                    <div class="text-[10px] text-slate-500">Zero-loss precision</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why FixedAssets -->
+        <section class="py-20 md:py-28 bg-white">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Why FixedAssets?</h2>
+                    <p class="text-slate-600">Comprehensive, compliant, and insanely fast fixed asset management for multi-national organizations.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="card-hover p-8 bg-white border border-slate-100 rounded-2xl">
+                        <div class="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center mb-6">
+                            <svg class="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"/></svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Compliant by Design</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed">Dedicated depreciation rules for Japan and 11 ASEAN nations. Switch between Local Tax & IFRS with Dual Book management.</p>
+                    </div>
+                    <div class="card-hover p-8 bg-white border border-slate-100 rounded-2xl">
+                        <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center mb-6">
+                            <svg class="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Built for Speed</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed">Rust & WebAssembly with client-side IndexedDB. Lightning-fast performance with zero server dependency for your data.</p>
+                    </div>
+                    <div class="card-hover p-8 bg-white border border-slate-100 rounded-2xl">
+                        <div class="w-12 h-12 bg-violet-50 rounded-xl flex items-center justify-center mb-6">
+                            <svg class="w-6 h-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3"/></svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Total Asset Lifecycle</h3>
+                        <p class="text-slate-600 text-sm leading-relaxed">From acquisition to disposal. CapEx, impairment, sale, retirement, CIP transfer, and departmental moves with full history.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Detail -->
+        <section id="features" class="py-20 md:py-28">
+            <div class="max-w-7xl mx-auto px-6 space-y-24">
+                <div class="text-center max-w-2xl mx-auto">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Comprehensive Power</h2>
+                    <p class="text-slate-600">From acquisition to retirement, every step is built for precision and regional compliance.</p>
+                </div>
+
+                <!-- Dual Book -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
+                    <div class="bg-white border border-slate-100 rounded-3xl shadow-lg p-8 lg:p-10">
+                        <div class="flex items-center justify-center gap-6 mb-6">
+                            <div class="text-center">
+                                <span class="text-3xl lg:text-4xl font-bold text-slate-900">LOCAL</span>
+                                <div class="text-xs text-slate-500 mt-1">Tax Filing</div>
+                            </div>
+                            <div class="flex flex-col items-center gap-1">
+                                <div class="w-14 h-8 bg-slate-200 rounded-full relative">
+                                    <div class="absolute left-1 top-1 w-6 h-6 bg-white rounded-full shadow transition-transform"></div>
+                                </div>
+                                <span class="text-[10px] text-slate-400">Toggle</span>
+                            </div>
+                            <div class="text-center">
+                                <span class="text-3xl lg:text-4xl font-bold text-blue-600">IFRS</span>
+                                <div class="text-xs text-slate-500 mt-1">Economic Value</div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl p-4 space-y-2 text-sm text-slate-600">
+                            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Independent useful life & salvage per book</div>
+                            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Separate posting histories</div>
+                            <div class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Pure SL/DB without country tax rules</div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <h3 class="text-2xl md:text-3xl font-bold">Dual Book: Local Tax vs. IFRS</h3>
+                        <p class="text-slate-600 leading-relaxed">Maintain independent depreciation parameters for Local Tax and IFRS on each asset. Generate separate postings and switch your entire application view with a single toggle.</p>
+                        <p class="text-slate-600 leading-relaxed">IFRS mode uses pure Straight-Line or Declining Balance without country-specific tax adjustments. Assets without IFRS settings are automatically skipped.</p>
+                    </div>
+                </div>
+
+                <!-- Depreciation Engine -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
+                    <div class="space-y-6 order-2 md:order-1">
+                        <h3 class="text-2xl md:text-3xl font-bold">Powerful Depreciation Engine</h3>
+                        <p class="text-slate-600 leading-relaxed">Monthly depreciation processing with bulk, category, or individual scope. Preview before execution, double-processing prevention, and flexible rollback (current/previous month or total cancel).</p>
+                        <p class="text-slate-600 leading-relaxed">Category-wise summary with time-slice capability. Select any point in time via calendar to see accumulated depreciation, book value, and progress per category.</p>
+                        <div class="bg-slate-50 rounded-xl p-4">
+                            <div class="text-xs font-mono text-slate-500 mb-2">rust_decimal high precision</div>
+                            <div class="font-mono text-lg text-slate-900">1,234,567.<span class="text-teal-600">89012345</span></div>
+                            <div class="text-xs text-slate-500 mt-1">Zero floating-point loss via custom serde</div>
+                        </div>
+                    </div>
+                    <div class="order-1 md:order-2">
+                        <div class="bg-white border border-slate-100 rounded-3xl shadow-lg p-6 space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-slate-900">Depreciation Methods</span>
+                                <span class="text-[10px] px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full font-medium">11 countries</span>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl"><span class="font-medium">Straight-Line</span><span class="text-slate-500">All countries</span></div>
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl"><span class="font-medium">200% DB + Guarantee</span><span class="text-slate-500">Japan</span></div>
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl"><span class="font-medium">Capital Allowance</span><span class="text-slate-500">SG / MY</span></div>
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl"><span class="font-medium">Group Rates PMK-72</span><span class="text-slate-500">Indonesia</span></div>
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl"><span class="font-medium">150/200% DB</span><span class="text-slate-500">Vietnam</span></div>
+                                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl"><span class="font-medium">Double Declining</span><span class="text-slate-500">TH / PH / LA</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lifecycle -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="card-hover p-5 bg-white border border-slate-100 rounded-2xl text-center">
+                            <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                            </div>
+                            <span class="text-sm font-semibold text-slate-900">CapEx</span>
+                            <p class="text-[11px] text-slate-500 mt-1">Capital expenditure tracking</p>
+                        </div>
+                        <div class="card-hover p-5 bg-white border border-slate-100 rounded-2xl text-center">
+                            <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z"/></svg>
+                            </div>
+                            <span class="text-sm font-semibold text-slate-900">Impairment</span>
+                            <p class="text-[11px] text-slate-500 mt-1">Loss recognition & history</p>
+                        </div>
+                        <div class="card-hover p-5 bg-white border border-slate-100 rounded-2xl text-center">
+                            <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/></svg>
+                            </div>
+                            <span class="text-sm font-semibold text-slate-900">Sale / Disposal</span>
+                            <p class="text-[11px] text-slate-500 mt-1">Gain/loss calculation</p>
+                        </div>
+                        <div class="card-hover p-5 bg-white border border-slate-100 rounded-2xl text-center">
+                            <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
+                            </div>
+                            <span class="text-sm font-semibold text-slate-900">Transfer</span>
+                            <p class="text-[11px] text-slate-500 mt-1">CIP & department moves</p>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <h3 class="text-2xl md:text-3xl font-bold">Complete Lifecycle Control</h3>
+                        <p class="text-slate-600 leading-relaxed">Full CRUD with batch registration, multi-photo WebP upload with auto-compression, full-text search across all fields, and tag management up to 50 tags per asset.</p>
+                        <p class="text-slate-600 leading-relaxed">Process lifecycle events: impairment loss, capital expenditure, sale, retirement (normal/casualty/disaster/theft), CIP-to-fixed-asset transfers, and departmental moves with complete historical tracking.</p>
+                    </div>
+                </div>
+
+                <!-- Data & Import -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20 items-center">
+                    <div class="space-y-6 order-2 md:order-1">
+                        <h3 class="text-2xl md:text-3xl font-bold">Data Management & Analytics</h3>
+                        <p class="text-slate-600 leading-relaxed">Dashboard with total assets, acquisition cost, net book value, and category breakdown with progress bars.</p>
+                        <p class="text-slate-600 leading-relaxed">Import/Export via 19-column CSV (including 3 IFRS columns) or JSON. Batch quantity support, department auto-matching, per-row error reporting. 5MB / 10,000 row limits.</p>
+                    </div>
+                    <div class="order-1 md:order-2">
+                        <div class="bg-white border border-slate-100 rounded-3xl shadow-lg p-6">
+                            <div class="text-sm font-bold text-slate-900 mb-4">CSV 19-Column Format</div>
+                            <div class="font-mono text-[10px] bg-slate-900 text-slate-300 rounded-xl p-4 overflow-x-auto">
+                                <div class="text-teal-400">// Core fields (1-16)</div>
+                                <div>asset_number, name, category,</div>
+                                <div>acquisition_date, cost, salvage_value,</div>
+                                <div>useful_life, method, location,</div>
+                                <div>description, prior_years, prior_months,</div>
+                                <div>status, tags, department, quantity</div>
+                                <div class="text-blue-400 mt-2">// IFRS fields (17-19)</div>
+                                <div class="text-blue-300">ifrs_useful_life, ifrs_salvage_value,</div>
+                                <div class="text-blue-300">ifrs_method</div>
+                            </div>
+                            <div class="flex gap-3 mt-4">
+                                <span class="text-[10px] px-2 py-1 bg-teal-50 text-teal-700 rounded-lg font-medium">CSV</span>
+                                <span class="text-[10px] px-2 py-1 bg-blue-50 text-blue-700 rounded-lg font-medium">JSON</span>
+                                <span class="text-[10px] px-2 py-1 bg-slate-100 text-slate-600 rounded-lg font-medium">Template DL</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Countries -->
+        <section id="countries" class="py-20 md:py-28 bg-white">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">11 Countries, 13 Currencies</h2>
+                    <p class="text-slate-600">Each country's depreciation rules are built-in. No configuration needed.</p>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <a href="/japan" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127471;&#127477;</div>
+                        <div class="text-sm font-semibold">Japan</div>
+                        <div class="text-[10px] text-slate-500">200% DB + Guarantee</div>
+                    </a>
+                    <a href="/singapore" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127480;&#127468;</div>
+                        <div class="text-sm font-semibold">Singapore</div>
+                        <div class="text-[10px] text-slate-500">Capital Allowance</div>
+                    </a>
+                    <a href="/malaysia" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127474;&#127486;</div>
+                        <div class="text-sm font-semibold">Malaysia</div>
+                        <div class="text-[10px] text-slate-500">Capital Allowance</div>
+                    </a>
+                    <a href="/thailand" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127481;&#127469;</div>
+                        <div class="text-sm font-semibold">Thailand</div>
+                        <div class="text-[10px] text-slate-500">200% DDB</div>
+                    </a>
+                    <a href="/indonesia" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127470;&#127465;</div>
+                        <div class="text-sm font-semibold">Indonesia</div>
+                        <div class="text-[10px] text-slate-500">PMK-72/2023</div>
+                    </a>
+                    <a href="/philippines" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127477;&#127469;</div>
+                        <div class="text-sm font-semibold">Philippines</div>
+                        <div class="text-[10px] text-slate-500">SL / DDB</div>
+                    </a>
+                    <a href="/vietnam" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127483;&#127475;</div>
+                        <div class="text-sm font-semibold">Vietnam</div>
+                        <div class="text-[10px] text-slate-500">150/200% DB</div>
+                    </a>
+                    <a href="/myanmar" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127474;&#127474;</div>
+                        <div class="text-sm font-semibold">Myanmar</div>
+                        <div class="text-[10px] text-slate-500">SL Only</div>
+                    </a>
+                    <a href="/cambodia" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127472;&#127469;</div>
+                        <div class="text-sm font-semibold">Cambodia</div>
+                        <div class="text-[10px] text-slate-500">SL / DDB</div>
+                    </a>
+                    <a href="/laos" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127473;&#127462;</div>
+                        <div class="text-sm font-semibold">Laos</div>
+                        <div class="text-[10px] text-slate-500">SL / DDB</div>
+                    </a>
+                    <a href="/brunei" class="card-hover p-4 bg-white border border-slate-100 rounded-2xl text-center">
+                        <div class="text-3xl mb-2">&#127463;&#127475;</div>
+                        <div class="text-sm font-semibold">Brunei</div>
+                        <div class="text-[10px] text-slate-500">SL / DDB</div>
+                    </a>
+                    <div class="p-4 bg-teal-50 border border-teal-100 rounded-2xl text-center flex flex-col items-center justify-center">
+                        <div class="text-sm font-semibold text-teal-700">+ USD / CNY</div>
+                        <div class="text-[10px] text-teal-600">Extra currencies</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security -->
+        <section id="security" class="py-20 md:py-28 bg-slate-900 text-white">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Trusted by Professionals</h2>
+                    <p class="text-slate-400">Enterprise-grade security with zero server dependency for your financial data.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="p-8 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                        <div class="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center mb-6">
+                            <svg class="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Robust Security</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">SHA-256 + salt password hashing. 8+ char strength requirement with uppercase, lowercase, digit. 5-failure rate limit with 15-minute lockout. 30-minute idle session timeout.</p>
+                    </div>
+                    <div class="p-8 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                        <div class="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center mb-6">
+                            <svg class="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"/></svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Data Privacy</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">Your financial data is stored locally on your device and never transmitted to external servers. Complete data isolation between organizations ensures confidential asset information stays private.</p>
+                    </div>
+                    <div class="p-8 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+                        <div class="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center mb-6">
+                            <svg class="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Security Headers</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">CSP, HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, strict Referrer-Policy. Deployed on Vercel with optimized WASM build (LTO + opt-level=z).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing -->
+        <section id="pricing" class="py-20 md:py-28 bg-white">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">Flexible Pricing</h2>
+                    <p class="text-slate-600">Get started for free or upgrade for unlimited assets.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-3xl mx-auto">
+                    <div class="card-hover p-8 bg-white border border-slate-200 rounded-2xl">
+                        <div class="mb-6">
+                            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-600">Starter</span>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-1">Free Plan</h3>
+                        <div class="text-4xl font-black mb-1">$0<span class="text-lg text-slate-500 font-normal"> / forever</span></div>
+                        <p class="text-sm text-slate-600 mb-6">Perfect for small businesses.</p>
+                        <ul class="space-y-3 text-sm text-slate-600 mb-8">
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Up to 5 assets</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>1 department</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>11 country rules + 13 currencies</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Dual Book (Local + IFRS)</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>CSV / JSON import & export</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Photo management</li>
+                        </ul>
+                        <a href="/signup" class="block w-full text-center py-3 rounded-full font-semibold text-slate-700 border border-slate-200 hover:border-slate-300 transition">Get Started Free</a>
+                    </div>
+                    <div class="card-hover p-8 bg-white border-2 border-teal-500 rounded-2xl relative">
+                        <span class="absolute -top-3 right-6 px-3 py-1 rounded-full text-xs font-semibold text-white bg-teal-600">Recommended</span>
+                        <div class="mb-6">
+                            <span class="text-xs font-semibold px-3 py-1 rounded-full bg-teal-50 text-teal-700">Unlimited</span>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-1">Paid Plan</h3>
+                        <div class="text-4xl font-black mb-1">Contact Us</div>
+                        <p class="text-sm text-slate-600 mb-6">For larger portfolios.</p>
+                        <ul class="space-y-3 text-sm text-slate-600 mb-8">
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Unlimited assets</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Unlimited departments</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Everything in Free</li>
+                            <li class="flex items-center gap-2"><svg class="w-4 h-4 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>Priority support</li>
+                        </ul>
+                        <a href="/signup" class="block w-full text-center py-3 rounded-full font-semibold text-white bg-teal-600 hover:bg-teal-700 transition shadow-lg shadow-teal-600/20">Get Started</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 15 Categories -->
+        <section class="py-20 md:py-28">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center max-w-2xl mx-auto mb-16">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4">15 Asset Categories</h2>
+                    <p class="text-slate-600">Full asset classification with category-specific depreciation rules, country-aware default useful lives, and intangible asset handling.</p>
+                </div>
+                <div class="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#127968;</div><div class="text-[11px] font-medium text-slate-700">Land</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#127970;</div><div class="text-[11px] font-medium text-slate-700">Building</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#128295;</div><div class="text-[11px] font-medium text-slate-700">Bldg Equip</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#127959;</div><div class="text-[11px] font-medium text-slate-700">Structures</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#9881;</div><div class="text-[11px] font-medium text-slate-700">Machinery</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#128296;</div><div class="text-[11px] font-medium text-slate-700">Tools</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#128663;</div><div class="text-[11px] font-medium text-slate-700">Vehicles</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#128196;</div><div class="text-[11px] font-medium text-slate-700">Leased</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#127959;</div><div class="text-[11px] font-medium text-slate-700">CIP</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#128161;</div><div class="text-[11px] font-medium text-slate-700">Patents</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#174;</div><div class="text-[11px] font-medium text-slate-700">Trademarks</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#128205;</div><div class="text-[11px] font-medium text-slate-700">Leasehold</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#128187;</div><div class="text-[11px] font-medium text-slate-700">Software</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#127960;</div><div class="text-[11px] font-medium text-slate-700">Facility</div></div>
+                    <div class="p-3 bg-white border border-slate-100 rounded-xl text-center"><div class="text-2xl mb-1">&#128230;</div><div class="text-[11px] font-medium text-slate-700">Other</div></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="py-20 md:py-28 bg-gradient-to-br from-teal-600 to-teal-700 text-white">
+            <div class="max-w-3xl mx-auto px-6 text-center space-y-8">
+                <h2 class="text-3xl md:text-5xl font-bold leading-tight">Unlock ASEAN<br/>Fixed Asset Management.</h2>
+                <p class="text-lg text-teal-100 max-w-xl mx-auto">Built for speed, accuracy, and compliance. No server dependency. Your data stays in your browser.</p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="/signup" class="px-8 py-3.5 rounded-full font-semibold text-teal-700 bg-white hover:bg-teal-50 transition shadow-lg">Get Started Free</a>
+                    <a href="/login" class="px-8 py-3.5 rounded-full font-semibold text-white bg-teal-800/50 border border-teal-400/30 hover:bg-teal-800/70 transition">Try Demo</a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-12 bg-slate-50 border-t border-slate-100">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-8 text-sm">
+                <div class="col-span-2 lg:col-span-1">
+                    <div class="flex items-center gap-2.5 mb-4">
+                        <div class="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5"/></svg>
+                        </div>
+                        <span class="text-lg font-bold text-slate-900">FixedAssets</span>
+                    </div>
+                    <p class="text-slate-500 text-sm">High-performance fixed asset management for ASEAN and Japan.</p>
+                </div>
+                <div>
+                    <h5 class="font-semibold text-slate-900 mb-4">Product</h5>
+                    <div class="space-y-2">
+                        <a href="#features" class="block text-slate-500 hover:text-slate-900 transition">Features</a>
+                        <a href="#countries" class="block text-slate-500 hover:text-slate-900 transition">Countries</a>
+                        <a href="#pricing" class="block text-slate-500 hover:text-slate-900 transition">Pricing</a>
+                        <a href="#security" class="block text-slate-500 hover:text-slate-900 transition">Security</a>
+                    </div>
+                </div>
+                <div>
+                    <h5 class="font-semibold text-slate-900 mb-4">Compliance</h5>
+                    <div class="space-y-2">
+                        <a href="/japan" class="block text-slate-500 hover:text-slate-900 transition">Japan</a>
+                        <a href="/singapore" class="block text-slate-500 hover:text-slate-900 transition">Singapore</a>
+                        <a href="/malaysia" class="block text-slate-500 hover:text-slate-900 transition">Malaysia</a>
+                        <a href="/thailand" class="block text-slate-500 hover:text-slate-900 transition">Thailand</a>
+                        <a href="/indonesia" class="block text-slate-500 hover:text-slate-900 transition">Indonesia</a>
+                        <a href="/philippines" class="block text-slate-500 hover:text-slate-900 transition">Philippines</a>
+                    </div>
+                </div>
+                <div>
+                    <h5 class="font-semibold text-slate-900 mb-4">&nbsp;</h5>
+                    <div class="space-y-2">
+                        <a href="/vietnam" class="block text-slate-500 hover:text-slate-900 transition">Vietnam</a>
+                        <a href="/myanmar" class="block text-slate-500 hover:text-slate-900 transition">Myanmar</a>
+                        <a href="/cambodia" class="block text-slate-500 hover:text-slate-900 transition">Cambodia</a>
+                        <a href="/laos" class="block text-slate-500 hover:text-slate-900 transition">Laos</a>
+                        <a href="/brunei" class="block text-slate-500 hover:text-slate-900 transition">Brunei</a>
+                    </div>
+                </div>
+                <div>
+                    <h5 class="font-semibold text-slate-900 mb-4">Legal</h5>
+                    <div class="space-y-2">
+                        <a href="/terms" class="block text-slate-500 hover:text-slate-900 transition">Terms of Service</a>
+                        <a href="#" class="block text-slate-500 hover:text-slate-900 transition">Privacy Policy</a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-12 pt-8 border-t border-slate-100 text-center text-xs text-slate-400">
+                &copy; 2025 FixedAssets. All rights reserved.
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
