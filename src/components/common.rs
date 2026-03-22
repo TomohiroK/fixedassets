@@ -57,6 +57,14 @@ pub fn SearchBar(
     }
 }
 
+pub fn currency_symbol() -> String {
+    use crate::models::company::CompanySetup;
+    CompanySetup::load()
+        .and_then(|s| s.currency())
+        .map(|c| c.symbol().to_string())
+        .unwrap_or_else(|| "$".to_string())
+}
+
 pub fn format_currency(amount: &rust_decimal::Decimal) -> String {
     use crate::models::company::CompanySetup;
 

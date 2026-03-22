@@ -6,3 +6,4 @@ pub mod dashboard;
 pub mod common;
 pub mod photo_uploader;
 pub mod modals;
+pub mod wizard_form;
