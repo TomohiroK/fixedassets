@@ -1,4 +1,4 @@
-asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department,quantity
-FA-001,Office Desk,ToolsFixtures,2025-01-15,5000,0,5,SL,Main Office,Executive standing desk,0,0,InUse,office;furniture,,1
-FA-002,Delivery Van,Vehicles,2024-06-01,35000,5000,6,SL,Warehouse,Toyota HiAce cargo van,0,0,InUse,vehicle;logistics,,1
-FA-003,Accounting Software,Software,2025-03-01,12000,0,3,SL,,Cloud ERP annual license,0,0,InUse,software;accounting,,1
+asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department,quantity,ifrs_useful_life,ifrs_salvage_value,ifrs_method
+FA-001,Office Desk,ToolsFixtures,2025-01-15,5000,0,5,SL,Main Office,Executive standing desk,0,0,InUse,office;furniture,,1,8,0,SL
+FA-002,Delivery Van,Vehicles,2024-06-01,35000,5000,6,SL,Warehouse,Toyota HiAce cargo van,0,0,InUse,vehicle;logistics,,1,,,
+FA-003,Accounting Software,Software,2025-03-01,12000,0,3,SL,,Cloud ERP annual license,0,0,InUse,software;accounting,,1,5,0,SL

@@ -280,9 +280,21 @@ pub fn SettingsPage() -> impl IntoView {
                                     <td class="py-1 font-mono text-blue-700">"department"</td>
                                     <td class="py-1">{move || i18n.t("settings.col_department")}</td>
                                 </tr>
-                                <tr>
+                                <tr class="border-b border-gray-200">
                                     <td class="py-1 font-mono text-blue-700">"quantity"</td>
                                     <td class="py-1">{move || i18n.t("settings.col_quantity")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"ifrs_useful_life"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_ifrs_life")}</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-1 font-mono text-blue-700">"ifrs_salvage_value"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_ifrs_salvage")}</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-1 font-mono text-blue-700">"ifrs_method"</td>
+                                    <td class="py-1">{move || i18n.t("settings.col_ifrs_method")}</td>
                                 </tr>
                             </tbody>
                         </table>

@@ -38,6 +38,15 @@ ASEAN 11ヶ国 + 日本対応の固定資産管理システム。モバイルフ
 | Capital Allowance (IA + AA) | シンガポール、マレーシア |
 | 定額法のみ | ミャンマー |
 
+#### IFRS デュアルブック
+
+- **ローカル/IFRS切替** — トグルスイッチで税務基準とIFRS基準の表示を切り替え
+- **IFRS個別パラメータ** — 資産ごとにIFRS用の耐用年数・残存価額・償却方法を設定可能
+- **IFRS未設定の自動スキップ** — IFRS設定がない資産はIFRSモードの償却処理でスキップ（ステータス表示）
+- **独立した償却実績** — ローカルとIFRSで別々の月次償却履歴を管理
+- **IFRS償却計算** — 国別税務ルールを適用しない純粋なSL/DB計算
+- **資産詳細連動** — 詳細画面の帳簿価額・償却累計額・スケジュールもトグルで切り替え
+
 #### 月次償却処理
 
 - **3つの処理範囲** — 一括処理、カテゴリ別、個別資産
@@ -52,6 +61,7 @@ ASEAN 11ヶ国 + 日本対応の固定資産管理システム。モバイルフ
 - **カテゴリ別集計** — 取得価額・償却累計額・帳簿価額をカテゴリごとに表示
 - **時点指定** — カレンダーで任意の年月を選択し、その時点での累計額を表示
 - **進捗バー** — カテゴリごとの償却進捗率を視覚的に表示
+- **Local/IFRS対応** — トグルに連動してそれぞれの集計を表示
 
 ### Asset Lifecycle (資産ライフサイクル)
 
@@ -71,10 +81,11 @@ ASEAN 11ヶ国 + 日本対応の固定資産管理システム。モバイルフ
 
 | 形式 | インポート | エクスポート | テンプレート |
 |------|:---:|:---:|:---:|
-| CSV (16列) | ✅ | ✅ | ✅ |
+| CSV (19列) | ✅ | ✅ | ✅ |
 | JSON | ✅ | ✅ | ✅ |
 
-- **CSV 16列**: 資産番号, 名称, カテゴリ, 取得日, 取得価額, 残存価額, 耐用年数, 償却方法, 場所, 説明, 既償却年数, 既償却月数, ステータス, タグ, 部門, 数量
+- **CSV 19列**: 資産番号, 名称, カテゴリ, 取得日, 取得価額, 残存価額, 耐用年数, 償却方法, 場所, 説明, 既償却年数, 既償却月数, ステータス, タグ, 部門, 数量, IFRS耐用年数, IFRS残存価額, IFRS償却方法
+- **IFRS列は任意** — 空欄ならローカルのみ、値を入力すればIFRS設定も一括登録
 - **一括数量対応** — CSV1行で数量指定 → 連番付き複数資産を自動生成
 - **バリデーション** — ファイルサイズ上限5MB、最大10,000件、行単位のエラーメッセージ
 
@@ -104,7 +115,7 @@ ASEAN 11ヶ国 + 日本対応の固定資産管理システム。モバイルフ
 - **CSPヘッダー** — Content-Security-Policy, X-Frame-Options, HSTS
 - **パスワード強度** — 8文字以上、大文字・小文字・数字を要求
 - **マルチテナント** — company_id による完全なデータ分離
-- **プラン管理** — 無料プラン（資産5件まで）/ 有料プラン（無制限）
+- **プラン管理** — 無料プラン（資産5件まで・部門1つまで）/ 有料プラン（無制限）
 
 ### Data Management
 
@@ -183,36 +194,38 @@ fixedassets/
 ├── input.css               # Tailwind CSS source
 ├── tailwind.config.js      # Tailwind config
 ├── vercel.json             # Vercel config
+├── sample_import.csv       # Sample CSV import file (19 columns, IFRS included)
 ├── locales/
 │   ├── en.json             # English translations
 │   └── ja.json             # Japanese translations
 ├── docs/rules/             # Country-specific depreciation rules
 └── src/
     ├── main.rs             # Entry point
-    ├── app.rs              # Root component + data version check
+    ├── app.rs              # Root component + data version check + AccountingStandard context
     ├── router.rs           # Client-side routing (12 routes)
     ├── auth.rs             # Authentication (SHA-256, rate limiting)
     ├── i18n.rs             # i18n (EN/JA)
     ├── models/
-    │   ├── asset.rs        # Asset, DepreciationPosting, ImpairmentRecord, CapExRecord, TransferRecord
-    │   ├── depreciation.rs # Schedule calculation, monthly posting, country-specific methods
+    │   ├── asset.rs        # Asset, DepreciationPosting, ImpairmentRecord, CapExRecord, TransferRecord, IFRS fields
+    │   ├── depreciation.rs # Schedule calculation, monthly posting, country-specific methods, IFRS calculation
+    │   ├── accounting_standard.rs # AccountingStandard enum (Local/IFRS), global signal context
     │   ├── company.rs      # CompanySetup, AseanCountry, Currency
     │   ├── country_rules.rs # Country-specific depreciation rules & rates
     │   └── department.rs   # Department master
     ├── stores/
-    │   └── asset_store.rs  # IndexedDB CRUD, CSV/JSON import/export, data versioning
+    │   └── asset_store.rs  # IndexedDB CRUD, CSV/JSON import/export (IFRS columns), data versioning
     ├── components/
-    │   ├── common.rs       # Shared UI (LoadingSpinner, ConfirmDialog, format_currency)
-    │   ├── asset_detail.rs # Asset detail view (financial summary, schedule table)
-    │   ├── asset_form.rs   # Asset registration/edit form (with department & quantity)
+    │   ├── common.rs       # Shared UI (LoadingSpinner, ConfirmDialog, StandardToggle, format_currency)
+    │   ├── asset_detail.rs # Asset detail view (Local/IFRS aware financial summary & schedule)
+    │   ├── asset_form.rs   # Asset registration/edit form (with IFRS settings, department & quantity)
     │   ├── dashboard.rs    # Dashboard summary cards
-    │   └── modals/         # Dispose, Sell, Impairment, CapEx, CIP Transfer modals
+    │   └── modals/         # Dispose, Sell, Impairment, CapEx, CIP Transfer, Department Transfer modals
     └── pages/
         ├── dashboard.rs    # Dashboard page
         ├── asset_list.rs   # Asset list with search & filters
         ├── asset_detail.rs # Asset detail page
         ├── asset_register.rs # Registration page
-        ├── depreciation.rs # Depreciation processing & category summary
+        ├── depreciation.rs # Depreciation processing & category summary (Local/IFRS dual-book)
         ├── settings.rs     # Settings, import/export, department master
         ├── setup.rs        # Initial company setup
         ├── login.rs        # Login page

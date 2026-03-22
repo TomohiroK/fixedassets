@@ -483,6 +483,17 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
             .max(1)
             .min(100);
 
+        // Columns 16-18: IFRS fields (optional)
+        let ifrs_useful_life: Option<u32> = fields.get(16)
+            .filter(|s| !s.is_empty())
+            .and_then(|s| s.parse().ok());
+        let ifrs_salvage_value: Option<Decimal> = fields.get(17)
+            .filter(|s| !s.is_empty())
+            .and_then(|s| Decimal::from_str(s).ok());
+        let ifrs_method: Option<String> = fields.get(18)
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string());
+
         for i in 0..qty {
             let num = if qty == 1 {
                 asset_number.clone()
@@ -506,6 +517,9 @@ pub async fn import_assets_csv(csv_text: &str) -> Result<usize, String> {
             );
             asset.status = status.clone();
             asset.department_id = department_id.clone();
+            asset.ifrs_useful_life = ifrs_useful_life;
+            asset.ifrs_salvage_value = ifrs_salvage_value;
+            asset.ifrs_method = ifrs_method.clone();
 
             save_asset(&asset).await?;
             count += 1;
@@ -579,11 +593,11 @@ fn parse_status(s: &str) -> AssetStatus {
 
 /// Generate CSV template string
 pub fn csv_template() -> String {
-    "asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department,quantity\n\
-     FA-001,Office Desk,ToolsFixtures,2024-04-01,50000,1,8,SL,Tokyo Office,Executive desk,0,0,InUse,office;furniture,SALES,1\n\
-     FA-010,Folding Chair,ToolsFixtures,2024-04-01,8000,1,8,SL,Tokyo Office,Meeting room chairs,0,0,InUse,office;furniture,SALES,5\n\
-     FA-020,Delivery Van,Vehicles,2023-10-15,2500000,1,6,DB,Warehouse,Toyota HiAce,1,3,InUse,vehicle;delivery,,1\n\
-     FA-030,Accounting Software,Software,2024-01-01,300000,0,5,SL,,Cloud license,0,0,InUse,software;accounting,IT,1\n".to_string()
+    "asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department,quantity,ifrs_useful_life,ifrs_salvage_value,ifrs_method\n\
+     FA-001,Office Desk,ToolsFixtures,2024-04-01,50000,1,8,SL,Tokyo Office,Executive desk,0,0,InUse,office;furniture,SALES,1,10,0,SL\n\
+     FA-010,Folding Chair,ToolsFixtures,2024-04-01,8000,1,8,SL,Tokyo Office,Meeting room chairs,0,0,InUse,office;furniture,SALES,5,,,\n\
+     FA-020,Delivery Van,Vehicles,2023-10-15,2500000,1,6,DB,Warehouse,Toyota HiAce,1,3,InUse,vehicle;delivery,,1,8,5000,SL\n\
+     FA-030,Accounting Software,Software,2024-01-01,300000,0,5,SL,,Cloud license,0,0,InUse,software;accounting,IT,1,,,\n".to_string()
 }
 
 /// Generate JSON template string
@@ -629,7 +643,7 @@ use crate::models::asset::{Category, DepreciationMethod, AssetStatus};
 /// Export all assets as CSV
 pub async fn export_all_assets_csv() -> Result<String, String> {
     let assets = get_all_assets().await?;
-    let mut csv = String::from("asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department\n");
+    let mut csv = String::from("asset_number,name,category,acquisition_date,cost,salvage_value,useful_life,depreciation_method,location,description,prior_years,prior_months,status,tags,department,ifrs_useful_life,ifrs_salvage_value,ifrs_method\n");
 
     for a in &assets {
         let category = format!("{:?}", a.category);
@@ -646,8 +660,12 @@ pub async fn export_all_assets_csv() -> Result<String, String> {
             })
             .unwrap_or_default();
 
+        let ifrs_life = a.ifrs_useful_life.map(|v| v.to_string()).unwrap_or_default();
+        let ifrs_salvage = a.ifrs_salvage_value.map(|v| v.normalize().to_string()).unwrap_or_default();
+        let ifrs_m = a.ifrs_method.as_deref().unwrap_or("");
+
         csv.push_str(&format!(
-            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n",
             csv_escape(&a.asset_number),
             csv_escape(&a.name),
             category,
@@ -663,6 +681,9 @@ pub async fn export_all_assets_csv() -> Result<String, String> {
             status,
             csv_escape(&tags),
             csv_escape(&dept_code),
+            ifrs_life,
+            ifrs_salvage,
+            ifrs_m,
         ));
     }
 
