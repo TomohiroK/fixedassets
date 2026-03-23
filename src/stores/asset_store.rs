@@ -217,7 +217,7 @@ pub async fn save_asset(asset: &Asset) -> Result<(), String> {
 }
 
 /// Batch save multiple assets in a single IndexedDB transaction for performance
-async fn batch_save_assets(assets: &[Asset]) -> Result<(), String> {
+pub async fn batch_save_assets(assets: &[Asset]) -> Result<(), String> {
     if assets.is_empty() {
         return Ok(());
     }
@@ -318,25 +318,40 @@ pub async fn get_asset(id: &str) -> Result<Option<Asset>, String> {
     let json_str: String = json.into();
     let asset: Asset = serde_json::from_str(&json_str)
         .map_err(|e| format!("Deserialize error: {}", e))?;
+
+    // Validate company_id — prevent cross-company data access
+    let cid = get_current_company_id();
+    if !cid.is_empty() && !asset.company_id.is_empty() && asset.company_id != cid {
+        return Ok(None);
+    }
+
     Ok(Some(asset))
 }
 
 pub async fn delete_asset(id: &str) -> Result<(), String> {
-    let db = open_db().await?;
-    let transaction = db
-        .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readwrite)
-        .map_err(|e| format!("Transaction error: {:?}", e))?;
-    let store = transaction
-        .object_store(STORE_NAME)
-        .map_err(|e| format!("Store error: {:?}", e))?;
+    // Verify the asset belongs to the current company before deleting
+    let asset = get_asset(id).await?;
+    match asset {
+        Some(_) => {
+            // Asset belongs to current company (validated by get_asset)
+            let db = open_db().await?;
+            let transaction = db
+                .transaction_with_str_and_mode(STORE_NAME, IdbTransactionMode::Readwrite)
+                .map_err(|e| format!("Transaction error: {:?}", e))?;
+            let store = transaction
+                .object_store(STORE_NAME)
+                .map_err(|e| format!("Store error: {:?}", e))?;
 
-    let request = store
-        .delete(&JsValue::from_str(id))
-        .map_err(|e| format!("Delete error: {:?}", e))?;
+            let request = store
+                .delete(&JsValue::from_str(id))
+                .map_err(|e| format!("Delete error: {:?}", e))?;
 
-    let rx = idb_request_to_future(&request);
-    rx.await.map_err(|_| "Channel error".to_string())??;
-    Ok(())
+            let rx = idb_request_to_future(&request);
+            rx.await.map_err(|_| "Channel error".to_string())??;
+            Ok(())
+        }
+        None => Err("Asset not found or access denied".to_string()),
+    }
 }
 
 pub async fn clear_all_assets() -> Result<(), String> {

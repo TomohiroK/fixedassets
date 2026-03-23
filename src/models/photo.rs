@@ -5,6 +5,9 @@ use uuid::Uuid;
 pub struct AssetPhoto {
     pub id: String,
     pub asset_id: String,
+    /// Company ID for data isolation
+    #[serde(default)]
+    pub company_id: String,
     /// Compressed image as data URL (e.g. "data:image/webp;base64,...")
     pub data_url: String,
     /// Smaller thumbnail data URL
@@ -19,6 +22,7 @@ impl AssetPhoto {
         Self {
             id: Uuid::new_v4().to_string(),
             asset_id,
+            company_id: crate::auth::get_current_company_id(),
             data_url,
             thumbnail_url,
             filename,

@@ -24,16 +24,26 @@ impl AccountingStandard {
     }
 }
 
-/// Global accounting standard signal — provided as context
+/// Per-company accounting standard signal — provided as context
 #[derive(Clone, Copy)]
 pub struct AccountingStandardSignal(pub RwSignal<AccountingStandard>);
 
+fn storage_key() -> String {
+    let cid = crate::auth::get_current_company_id();
+    if cid.is_empty() {
+        "fa_accounting_standard".to_string()
+    } else {
+        format!("fa_accounting_standard_{}", cid)
+    }
+}
+
 impl AccountingStandardSignal {
     pub fn new() -> Self {
-        // Load from localStorage
+        // Load from localStorage (scoped by company_id)
+        let key = storage_key();
         let initial = if let Some(window) = web_sys::window() {
             if let Ok(Some(storage)) = window.local_storage() {
-                match storage.get_item("fa_accounting_standard").ok().flatten().as_deref() {
+                match storage.get_item(&key).ok().flatten().as_deref() {
                     Some("IFRS") => AccountingStandard::IFRS,
                     _ => AccountingStandard::Local,
                 }
@@ -56,14 +66,15 @@ impl AccountingStandardSignal {
                 AccountingStandard::Local => AccountingStandard::IFRS,
                 AccountingStandard::IFRS => AccountingStandard::Local,
             };
-            // Persist to localStorage
+            // Persist to localStorage (scoped by company_id)
+            let key = storage_key();
             if let Some(window) = web_sys::window() {
                 if let Ok(Some(storage)) = window.local_storage() {
                     let val = match s {
                         AccountingStandard::IFRS => "IFRS",
                         AccountingStandard::Local => "Local",
                     };
-                    let _ = storage.set_item("fa_accounting_standard", val);
+                    let _ = storage.set_item(&key, val);
                 }
             }
         });

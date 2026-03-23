@@ -162,8 +162,8 @@ impl AuthState {
     }
 
     pub fn authenticate(&self, email: String, password: String) -> Result<(), String> {
-        // Rate limiting check
-        if let Err(msg) = check_rate_limit() {
+        // Rate limiting check (scoped per email)
+        if let Err(msg) = check_rate_limit(&email) {
             return Err(msg);
         }
 
@@ -183,7 +183,7 @@ impl AuthState {
                 };
 
                 if valid {
-                    reset_login_attempts();
+                    reset_login_attempts(&email);
                     // Update last_login timestamp
                     update_last_login(&email);
                     self.login(u.email.clone(), u.name.clone(), u.paid, u.company_id.clone());
@@ -191,12 +191,12 @@ impl AuthState {
                     crate::models::company::CompanySetup::ensure_exists();
                     Ok(())
                 } else {
-                    record_failed_attempt();
+                    record_failed_attempt(&email);
                     Err("Invalid email or password".to_string())
                 }
             }
             None => {
-                record_failed_attempt();
+                record_failed_attempt(&email);
                 Err("Invalid email or password".to_string())
             }
         }
@@ -342,9 +342,15 @@ fn load_session() -> Option<User> {
     None
 }
 
-// ─── Rate limiting ──────────────────────────────────────────────────
-fn get_login_attempts() -> LoginAttempts {
-    get_stored_string("fa_login_attempts")
+// ─── Rate limiting (scoped per email) ───────────────────────────────
+fn login_attempts_key(email: &str) -> String {
+    // Use a sanitized email as part of the key for per-user rate limiting
+    let safe_email = email.to_lowercase().replace(|c: char| !c.is_alphanumeric() && c != '@' && c != '.', "_");
+    format!("fa_login_attempts_{}", safe_email)
+}
+
+fn get_login_attempts(email: &str) -> LoginAttempts {
+    get_stored_string(&login_attempts_key(email))
         .and_then(|json| serde_json::from_str(&json).ok())
         .unwrap_or(LoginAttempts {
             count: 0,
@@ -353,14 +359,14 @@ fn get_login_attempts() -> LoginAttempts {
         })
 }
 
-fn save_login_attempts(attempts: &LoginAttempts) {
+fn save_login_attempts(email: &str, attempts: &LoginAttempts) {
     if let Ok(json) = serde_json::to_string(attempts) {
-        store_string("fa_login_attempts", &json);
+        store_string(&login_attempts_key(email), &json);
     }
 }
 
-fn check_rate_limit() -> Result<(), String> {
-    let attempts = get_login_attempts();
+fn check_rate_limit(email: &str) -> Result<(), String> {
+    let attempts = get_login_attempts(email);
     let now = now_ms();
 
     // Check if locked
@@ -375,14 +381,14 @@ fn check_rate_limit() -> Result<(), String> {
             ));
         }
         // Lockout expired, reset
-        reset_login_attempts();
+        reset_login_attempts(email);
     }
 
     Ok(())
 }
 
-fn record_failed_attempt() {
-    let mut attempts = get_login_attempts();
+fn record_failed_attempt(email: &str) {
+    let mut attempts = get_login_attempts(email);
     let now = now_ms();
 
     // Reset if the window has passed (15 min)
@@ -404,11 +410,11 @@ fn record_failed_attempt() {
         attempts.locked_until = Some(now + LOCKOUT_DURATION_MS);
     }
 
-    save_login_attempts(&attempts);
+    save_login_attempts(email, &attempts);
 }
 
-fn reset_login_attempts() {
-    remove_stored("fa_login_attempts");
+fn reset_login_attempts(email: &str) {
+    remove_stored(&login_attempts_key(email));
 }
 
 // ─── Demo accounts (hashed) ─────────────────────────────────────────
@@ -530,8 +536,8 @@ pub fn toggle_user_paid(email: &str) -> bool {
 
 /// Verify admin password (hashed comparison)
 pub fn verify_admin_password(admin_email: &str, password: &str) -> bool {
-    // Rate limiting check
-    if check_rate_limit().is_err() {
+    // Rate limiting check (scoped per email)
+    if check_rate_limit(admin_email).is_err() {
         return false;
     }
 
@@ -546,14 +552,14 @@ pub fn verify_admin_password(admin_email: &str, password: &str) -> bool {
         };
 
         if valid {
-            reset_login_attempts();
+            reset_login_attempts(admin_email);
             true
         } else {
-            record_failed_attempt();
+            record_failed_attempt(admin_email);
             false
         }
     } else {
-        record_failed_attempt();
+        record_failed_attempt(admin_email);
         false
     }
 }
@@ -669,12 +675,13 @@ pub fn run_inactive_account_cleanup() {
             store_string("fa_users", &json);
         }
 
-        // Clean up associated company setup data
+        // Clean up all company-scoped data
         if let Some(window) = web_sys::window() {
             if let Ok(Some(storage)) = window.local_storage() {
                 for cid in &removed_company_ids {
-                    let key = format!("fa_company_setup_{}", cid);
-                    let _ = storage.remove_item(&key);
+                    let _ = storage.remove_item(&format!("fa_company_setup_{}", cid));
+                    let _ = storage.remove_item(&format!("fa_departments_{}", cid));
+                    let _ = storage.remove_item(&format!("fa_accounting_standard_{}", cid));
                 }
             }
         }

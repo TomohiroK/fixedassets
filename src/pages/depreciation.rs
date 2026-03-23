@@ -162,7 +162,8 @@ pub fn DepreciationPage() -> impl IntoView {
                         }
                     };
 
-                    let mut count = 0u32;
+                    let mut modified_assets: Vec<crate::models::asset::Asset> = Vec::new();
+                    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
                     for mut asset in assets {
                         if !filtered_ids.contains(&asset.id) {
                             continue;
@@ -190,17 +191,18 @@ pub fn DepreciationPage() -> impl IntoView {
                             year,
                             month,
                             amount,
-                            posted_at: chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string(),
+                            posted_at: now.clone(),
                         };
                         if is_ifrs {
                             asset.ifrs_postings.push(posting);
                         } else {
                             asset.postings.push(posting);
                         }
-                        asset.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
-                        let _ = asset_store::save_asset(&asset).await;
-                        count += 1;
+                        asset.updated_at = now.clone();
+                        modified_assets.push(asset);
                     }
+                    let count = modified_assets.len() as u32;
+                    let _ = asset_store::batch_save_assets(&modified_assets).await;
                     is_processing.set(false);
                     status_msg.set(Some((format!("{}{}", count, i18n.t("dep_post.success_process")), true)));
                     refresh.update(|v| *v += 1);
@@ -256,7 +258,8 @@ pub fn DepreciationPage() -> impl IntoView {
                         }
                     };
 
-                    let mut count = 0u32;
+                    let mut modified_assets: Vec<crate::models::asset::Asset> = Vec::new();
+                    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
                     for mut asset in assets {
                         if !filtered_ids.contains(&asset.id) {
                             continue;
@@ -265,11 +268,12 @@ pub fn DepreciationPage() -> impl IntoView {
                         let before = postings.len();
                         postings.retain(|p| !(p.year == t_year && p.month == t_month));
                         if postings.len() < before {
-                            asset.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
-                            let _ = asset_store::save_asset(&asset).await;
-                            count += 1;
+                            asset.updated_at = now.clone();
+                            modified_assets.push(asset);
                         }
                     }
+                    let count = modified_assets.len() as u32;
+                    let _ = asset_store::batch_save_assets(&modified_assets).await;
                     is_processing.set(false);
                     status_msg.set(Some((format!("{}{}", count, i18n.t("dep_post.success_cancel")), true)));
                     refresh.update(|v| *v += 1);
@@ -309,7 +313,8 @@ pub fn DepreciationPage() -> impl IntoView {
                         }
                     };
 
-                    let mut count = 0u32;
+                    let mut modified_assets: Vec<crate::models::asset::Asset> = Vec::new();
+                    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
                     for mut asset in assets {
                         if !filtered_ids.contains(&asset.id) {
                             continue;
@@ -317,11 +322,12 @@ pub fn DepreciationPage() -> impl IntoView {
                         let postings = if is_ifrs { &mut asset.ifrs_postings } else { &mut asset.postings };
                         if !postings.is_empty() {
                             postings.clear();
-                            asset.updated_at = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S").to_string();
-                            let _ = asset_store::save_asset(&asset).await;
-                            count += 1;
+                            asset.updated_at = now.clone();
+                            modified_assets.push(asset);
                         }
                     }
+                    let count = modified_assets.len() as u32;
+                    let _ = asset_store::batch_save_assets(&modified_assets).await;
                     is_processing.set(false);
                     status_msg.set(Some((format!("{}{}", count, i18n.t("dep_post.success_cancel")), true)));
                     refresh.update(|v| *v += 1);

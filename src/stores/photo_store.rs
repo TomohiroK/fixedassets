@@ -6,6 +6,7 @@ use web_sys::{IdbDatabase, IdbObjectStoreParameters, IdbTransactionMode, IdbRequ
 use js_sys::Array;
 
 use crate::models::photo::AssetPhoto;
+use crate::auth::get_current_company_id;
 
 const DB_NAME: &str = "fixedassets_db";
 const DB_VERSION: u32 = 2;
@@ -181,6 +182,13 @@ pub async fn get_photos_for_asset(asset_id: &str) -> Result<Vec<AssetPhoto>, Str
     }
 
     photos.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+
+    // Filter by current company_id for data isolation
+    let cid = get_current_company_id();
+    if !cid.is_empty() {
+        photos.retain(|p| p.company_id.is_empty() || p.company_id == cid);
+    }
+
     Ok(photos)
 }
 
@@ -192,6 +200,24 @@ pub async fn delete_photo(id: &str) -> Result<(), String> {
     let store = transaction
         .object_store(PHOTO_STORE)
         .map_err(|e| format!("Store error: {:?}", e))?;
+
+    // Verify photo belongs to current company before deleting
+    let get_request = store
+        .get(&JsValue::from_str(id))
+        .map_err(|e| format!("Get error: {:?}", e))?;
+    let rx = idb_request_to_future(&get_request);
+    let result = rx.await.map_err(|_| "Channel error".to_string())??;
+
+    if !result.is_undefined() && !result.is_null() {
+        let cid = get_current_company_id();
+        let photo_cid = js_sys::Reflect::get(&result, &JsValue::from_str("company_id"))
+            .ok()
+            .and_then(|v| v.as_string())
+            .unwrap_or_default();
+        if !cid.is_empty() && !photo_cid.is_empty() && photo_cid != cid {
+            return Err("Access denied".to_string());
+        }
+    }
 
     let request = store
         .delete(&JsValue::from_str(id))
