@@ -39,7 +39,7 @@ pub fn ReportPage() -> impl IntoView {
         let desc = description.get();
 
         let mut report = format!(
-            "--- FixedAssets Report ---\nType: {}\nSubject: {}\n",
+            "--- Ledgea Report ---\nType: {}\nSubject: {}\n",
             cat_label, subj
         );
 
@@ -94,7 +94,7 @@ pub fn ReportPage() -> impl IntoView {
         let email_val = contact_email.get();
 
         let mailto_subject = js_sys::encode_uri_component(
-            &format!("[FixedAssets {}] {}", cat_label, subj)
+            &format!("[Ledgea {}] {}", cat_label, subj)
         );
         let mut body = format!("Type: {}\n\n{}", cat_label, desc);
         if !email_val.is_empty() {
@@ -103,7 +103,7 @@ pub fn ReportPage() -> impl IntoView {
         let mailto_body = js_sys::encode_uri_component(&body);
 
         let mailto_url = format!(
-            "mailto:support@fixedassets.app?subject={}&body={}",
+            "mailto:support@ledgea.app?subject={}&body={}",
             mailto_subject, mailto_body
         );
 

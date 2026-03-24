@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "固定資産管理"
+    "title": "Ledgea"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -9,14 +9,14 @@
     "settings": "設定"
   },
   "landing": {
-    "headline": "スマート固定資産管理",
-    "subheadline": "資産の追跡、減価償却、管理を簡単に。ASEAN企業向けに設計。",
+    "headline": "アジアの複雑さを、ひとつの台帳に。",
+    "subheadline": "ASEAN+日本の固定資産を一元管理。各国税法準拠の減価償却、IFRS二重帳簿対応。",
     "feature_track": "資産追跡",
     "feature_depreciation": "自動償却",
     "feature_multilang": "多言語対応",
     "get_started": "始める",
     "sign_in": "ログイン",
-    "footer": "FixedAssets - ASEAN向け資産管理システム"
+    "footer": "Ledgea — アジアの複雑さを、ひとつの台帳に。"
   },
   "auth": {
     "sign_in": "ログイン",

@@ -171,7 +171,7 @@ pub fn SettingsPage() -> impl IntoView {
                         class="btn-secondary text-sm py-2.5"
                         on:click=move |_| {
                             let csv = asset_store::csv_template();
-                            download_file(&csv, "fixedassets_template.csv", "text/csv");
+                            download_file(&csv, "ledgea_template.csv", "text/csv");
                             status_message.set(Some(i18n.t("settings.template_downloaded")));
                         }
                     >
@@ -186,7 +186,7 @@ pub fn SettingsPage() -> impl IntoView {
                         class="btn-secondary text-sm py-2.5"
                         on:click=move |_| {
                             let json = asset_store::json_template();
-                            download_file(&json, "fixedassets_template.json", "application/json");
+                            download_file(&json, "ledgea_template.json", "application/json");
                             status_message.set(Some(i18n.t("settings.template_downloaded")));
                         }
                     >
@@ -308,7 +308,7 @@ pub fn SettingsPage() -> impl IntoView {
                                 leptos::task::spawn_local(async move {
                                     match asset_store::export_all_assets().await {
                                         Ok(json) => {
-                                            download_file(&json, "fixedassets_export.json", "application/json");
+                                            download_file(&json, "ledgea_export.json", "application/json");
                                             status_message.set(Some("Export (JSON) completed".to_string()));
                                         }
                                         Err(e) => {
@@ -326,7 +326,7 @@ pub fn SettingsPage() -> impl IntoView {
                                 leptos::task::spawn_local(async move {
                                     match asset_store::export_all_assets_csv().await {
                                         Ok(csv) => {
-                                            download_file(&csv, "fixedassets_export.csv", "text/csv");
+                                            download_file(&csv, "ledgea_export.csv", "text/csv");
                                             status_message.set(Some("Export (CSV) completed".to_string()));
                                         }
                                         Err(e) => {

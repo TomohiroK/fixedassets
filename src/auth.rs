@@ -688,7 +688,7 @@ pub fn run_inactive_account_cleanup() {
 
         web_sys::console::log_1(
             &format!(
-                "[FixedAssets] Cleanup: removed {} inactive free account(s)",
+                "[Ledgea] Cleanup: removed {} inactive free account(s)",
                 removed_company_ids.len()
             ).into()
         );

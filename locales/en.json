@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "FixedAssets"
+    "title": "Ledgea"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -9,14 +9,14 @@
     "settings": "Settings"
   },
   "landing": {
-    "headline": "Smart Fixed Asset Management",
-    "subheadline": "Track, depreciate, and manage your assets with ease. Built for ASEAN businesses.",
+    "headline": "The ledger built for Asia's complexity.",
+    "subheadline": "Track, depreciate, and manage your fixed assets across ASEAN + Japan. Country-specific tax rules, IFRS dual-book.",
     "feature_track": "Track Assets",
     "feature_depreciation": "Auto Depreciation",
     "feature_multilang": "Multi-Language",
     "get_started": "Get Started",
     "sign_in": "Sign In",
-    "footer": "FixedAssets - Asset Management for ASEAN"
+    "footer": "Ledgea — The ledger built for Asia's complexity."
   },
   "auth": {
     "sign_in": "Sign In",
