@@ -36,14 +36,46 @@ silently using a zero-filled salt. Existing hash format and storage keys are unc
 - Browser used a dedicated localhost origin and a synthetic asset. Production and existing user data were not used.
 - Financial calculation correctness, photo upload, and production Vercel execution were not revalidated.
 
-## Remaining upstream warnings
+## Security remediation
 
-Vercel CLI 59.16.0 pins tar 7.5.7 through its tool dependencies. A same-major override to
-7.5.22 removes the critical advisory; re-check this override when upgrading Vercel again.
-After the override, npm reports 27 development dependency vulnerabilities
-(1 low, 11 moderate, 15 high; 0 critical). These dependencies are deployment tools,
-not bundled into the browser WASM application. Do not use npm audit fix --force blindly:
-it proposes a Vercel downgrade and other potentially incompatible changes.
+The 27 npm audit findings were resolved on 2026-09-11. Vercel CLI remains at
+59.16.0; package.json overrides replace vulnerable transitive dependencies.
+
+| Dependency | Resolved version |
+| --- | --- |
+| tar | 7.5.22 |
+| @tootallnate/once | 2.0.1 |
+| ajv | 8.20.0 |
+| js-yaml | 4.3.2 |
+| minimatch (10.x) | 10.2.6 |
+| path-to-regexp (6.x / 8.x) | 6.3.0 / 8.4.2 |
+| smol-toml | 1.8.0 |
+| undici (previously 5.x) | 6.28.1 |
+
+Overrides are scoped by major where multiple major versions coexist. Undici 5.x
+requires a major upgrade to 6.28.1; the existing 7.x dependency is preserved.
+Undici release notes: https://github.com/nodejs/undici/releases/tag/v6.28.1
+Review these overrides on future Vercel upgrades and remove them once upstream
+requirements resolve to secure versions without overrides.
+
+Validation after remediation:
+
+- npm audit: 0 vulnerabilities, including development dependencies.
+- npm ci --ignore-scripts: clean reinstall also reports 0 vulnerabilities.
+- npm ls: dependency overrides resolve without invalid dependency errors.
+- Vercel inspect successfully fetched the existing production deployment (Ready).
+- Vercel-resolved Undici: local HTTP fetch POST and request GET passed.
+- path-to-regexp 6.x through @vercel/node and @vercel/remix-builder, and 8.x:
+  route matching passed.
+- No new deployment was made as part of security remediation. Upload/deployment
+  execution was not repeated; these changes affect local deployment tools, not
+  the already deployed Rust/WASM assets.
+
+This is a clean npm advisory audit at the time of checking, not a comprehensive
+application security audit. The deprecated stream-to-promise warning remains;
+it is not an npm vulnerability finding.
+
+## Remaining Rust warning
 
 Rust reports a future-compatibility warning in proc-macro-error2 2.0.1.
 Current Rust 1.98.1 builds successfully; track upstream before the next toolchain upgrade.
