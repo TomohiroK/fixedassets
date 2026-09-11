@@ -47,7 +47,7 @@ pub fn AssetProductCard(asset: Asset) -> impl IntoView {
                     {move || {
                         let emoji_fallback = emoji_for_fallback.clone();
                         first_photo.get().map(move |data| {
-                            match (*data).clone() {
+                            match data {
                                 Some(photo) => {
                                     let thumb = photo.thumbnail_url.clone();
                                     view! {

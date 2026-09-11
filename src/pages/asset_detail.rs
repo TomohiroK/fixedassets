@@ -39,7 +39,7 @@ pub fn AssetDetailPage() -> impl IntoView {
                 {move || {
                     let nav_del = nav_for_delete.clone();
                     asset.get().map(|data| {
-                        match (*data).clone() {
+                        match data {
                             Some(asset_data) => {
                                 let asset_for_detail = asset_data.clone();
                                 let asset_for_form = asset_data.clone();

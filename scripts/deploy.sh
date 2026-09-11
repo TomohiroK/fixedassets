@@ -2,7 +2,7 @@
 set -e
 
 echo "==> Building with Trunk..."
-trunk build --release
+trunk build --release --locked
 
 echo "==> Preparing Vercel Build Output..."
 rm -rf .vercel/output
@@ -86,6 +86,6 @@ cat > .vercel/output/functions/_middleware.func/.vc-config.json << 'EOF'
 EOF
 
 echo "==> Deploying to Vercel..."
-vercel deploy --prebuilt --prod
+npx --no-install vercel deploy --prebuilt --prod
 
 echo "==> Done!"

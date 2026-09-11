@@ -320,7 +320,7 @@ pub fn PhotoGallery(
             <Suspense fallback=move || view! { <div></div> }>
                 {move || {
                     photos.get().map(|data| {
-                        let photos_vec: Vec<AssetPhoto> = (*data).clone();
+                        let photos_vec: Vec<AssetPhoto> = data;
                         if photos_vec.is_empty() {
                             if !editable {
                                 return view! { <div></div> }.into_any();

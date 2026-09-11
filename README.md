@@ -7,11 +7,11 @@ ASEAN 11ヶ国 + 日本対応の固定資産管理システム。モバイルフ
 
 ## What is FixedAssets?
 
-> **FixedAssets** は、Rust/WebAssembly（Leptos 0.7 CSR）と Tailwind CSS で構築されたモバイルファーストの固定資産管理Webアプリケーションであり、日本を含むASEAN 11ヶ国（シンガポール・マレーシア・タイ・インドネシア・フィリピン・ベトナム・ミャンマー・カンボジア・ラオス・ブルネイ）の国別償却規則（日本の200%定率法＋保証率切替、シンガポール/マレーシアのCapital Allowance IA+AA、インドネシアのPMK-72/2023グループ別税率、ベトナムの150%/200%定率法、タイ・フィリピン・ラオス・カンボジア・ブルネイのDDB、ミャンマーの定額法のみ）と13通貨（JPY・USD・CNY・SGD・MYR・THB・IDR・PHP・VND・MMK・KHR・LAK・BND）に対応し、15カテゴリ（土地・建物・建物附属設備・構築物・機械装置・工具器具備品・車両運搬具・リース資産・建設仮勘定・特許権・商標権・借地権・ソフトウェア・施設利用権・その他）の資産をCRUD管理（数量指定による連番付き一括登録、全文検索＋カテゴリフィルタ、タグ管理最大50個、写真の複数アップロード・WebP自動圧縮・サムネイル生成）でき、ローカル税務基準とIFRSのデュアルブック（資産ごとに独立したIFRS耐用年数・残存価額・償却方法の設定、国別税務ルールを適用しない純粋SL/DB計算、独立した月次償却実績ifrs_postings、IFRS未設定資産の自動スキップ、トグルスイッチによる表示切替）を備え、月次償却処理（一括・カテゴリ別・個別の3範囲、カレンダーUIによる年月指定、プレビュー確認、当月実行・当月/前月取消・全取消の3アクション、同月二重処理防止、全処理済み時のボタン無効化）とカテゴリ別償却集計（任意時点での取得価額・償却累計額・帳簿価額・進捗バー表示、Local/IFRS連動）を提供し、資産ライフサイクル管理として減損処理（日付・金額・理由の記録、複数回対応、累計自動計算、帳簿価額超過バリデーション）、資本的支出CapEx（日付・金額・説明の記録、取得価額加算、残存耐用年数での再計算）、除却（通常・災害・盗難の3区分、除却日・収入・理由の記録、損益自動計算、取消可能）と売却（売却日・売却先・売却額の記録、売却損益自動計算）、建設仮勘定CIPから本勘定への振替（カテゴリ・耐用年数・償却方法・残存価額の再設定、振替日からの償却開始）、部門間移動（異動日・理由・移動元/先の履歴管理）を持ち、部門マスタ管理（コード＋名称の登録・編集・削除、資産割当、インポート時の自動マッチング）を備え、CSV 19列（資産番号・名称・カテゴリ・取得日・取得価額・残存価額・耐用年数・償却方法・場所・説明・既償却年数・既償却月数・ステータス・タグ・部門・数量・IFRS耐用年数・IFRS残存価額・IFRS償却方法）とJSONの双方向インポート/エクスポート（テンプレートDL、一括数量対応、5MB/10,000件上限、行単位エラーメッセージ）に対応し、ダッシュボード（総資産数・総取得価額・簿価合計・使用中/除却済み件数・カテゴリ別内訳と割合バー）を表示し、認証機能としてSHA-256＋ソルトによるパスワードハッシュ、8文字以上＋大文字小文字数字のパスワード強度要求、5回失敗15分ロックアウトのレート制限、30分非操作セッションタイムアウト、company_idによるマルチテナントデータ分離、無料プラン（資産5件・部門1つまで）/有料プラン（無制限）の管理、管理者パネル（全アカウント一覧・プラン切替・代理ログイン・パスワード認証）を備え、DATA_VERSIONメカニズムによるデプロイ時の全クライアント自動データリセット、設定画面からの全データクリア（確認付き）と国変更（データリセットを伴う）、英語/日本語の200以上の翻訳キーによる多言語対応（ヘッダーおよび設定画面での切替、localStorageへの保存）、rust_decimalによる高精度金額計算（Option\<Decimal\>のカスタムserde文字列シリアライズでJS浮動小数点精度損失を回避）、IndexedDB v2（assets・photosオブジェクトストア）とlocalStorage（会社設定・部門・セッション・言語・会計基準）によるクライアントサイドデータ永続化、Vercelへの静的SPAデプロイ（CSP・X-Frame-Options DENY・HSTS・X-Content-Type-Options nosniff等のセキュリティヘッダー、WASMの長期キャッシュ、SPAフォールバックリライト、オプショナルBasic認証）、OGP/Twitterカード/JSON-LD構造化データのSEOメタタグ、11ヶ国別SEOランディングページ（ジオリダイレクト付き）＋専用LPページ（/lp）、利用規約ページ、デモアカウント3件の自動シード、LTO＋opt-level=zによるWASMサイズ最適化ビルドを備えた、包括的な固定資産管理システムである。
+> **FixedAssets** は、Rust/WebAssembly（Leptos 0.8 CSR）と Tailwind CSS で構築されたモバイルファーストの固定資産管理Webアプリケーションであり、日本を含むASEAN 11ヶ国（シンガポール・マレーシア・タイ・インドネシア・フィリピン・ベトナム・ミャンマー・カンボジア・ラオス・ブルネイ）の国別償却規則（日本の200%定率法＋保証率切替、シンガポール/マレーシアのCapital Allowance IA+AA、インドネシアのPMK-72/2023グループ別税率、ベトナムの150%/200%定率法、タイ・フィリピン・ラオス・カンボジア・ブルネイのDDB、ミャンマーの定額法のみ）と13通貨（JPY・USD・CNY・SGD・MYR・THB・IDR・PHP・VND・MMK・KHR・LAK・BND）に対応し、15カテゴリ（土地・建物・建物附属設備・構築物・機械装置・工具器具備品・車両運搬具・リース資産・建設仮勘定・特許権・商標権・借地権・ソフトウェア・施設利用権・その他）の資産をCRUD管理（数量指定による連番付き一括登録、全文検索＋カテゴリフィルタ、タグ管理最大50個、写真の複数アップロード・WebP自動圧縮・サムネイル生成）でき、ローカル税務基準とIFRSのデュアルブック（資産ごとに独立したIFRS耐用年数・残存価額・償却方法の設定、国別税務ルールを適用しない純粋SL/DB計算、独立した月次償却実績ifrs_postings、IFRS未設定資産の自動スキップ、トグルスイッチによる表示切替）を備え、月次償却処理（一括・カテゴリ別・個別の3範囲、カレンダーUIによる年月指定、プレビュー確認、当月実行・当月/前月取消・全取消の3アクション、同月二重処理防止、全処理済み時のボタン無効化）とカテゴリ別償却集計（任意時点での取得価額・償却累計額・帳簿価額・進捗バー表示、Local/IFRS連動）を提供し、資産ライフサイクル管理として減損処理（日付・金額・理由の記録、複数回対応、累計自動計算、帳簿価額超過バリデーション）、資本的支出CapEx（日付・金額・説明の記録、取得価額加算、残存耐用年数での再計算）、除却（通常・災害・盗難の3区分、除却日・収入・理由の記録、損益自動計算、取消可能）と売却（売却日・売却先・売却額の記録、売却損益自動計算）、建設仮勘定CIPから本勘定への振替（カテゴリ・耐用年数・償却方法・残存価額の再設定、振替日からの償却開始）、部門間移動（異動日・理由・移動元/先の履歴管理）を持ち、部門マスタ管理（コード＋名称の登録・編集・削除、資産割当、インポート時の自動マッチング）を備え、CSV 19列（資産番号・名称・カテゴリ・取得日・取得価額・残存価額・耐用年数・償却方法・場所・説明・既償却年数・既償却月数・ステータス・タグ・部門・数量・IFRS耐用年数・IFRS残存価額・IFRS償却方法）とJSONの双方向インポート/エクスポート（テンプレートDL、一括数量対応、5MB/10,000件上限、行単位エラーメッセージ）に対応し、ダッシュボード（総資産数・総取得価額・簿価合計・使用中/除却済み件数・カテゴリ別内訳と割合バー）を表示し、認証機能としてSHA-256＋ソルトによるパスワードハッシュ、8文字以上＋大文字小文字数字のパスワード強度要求、5回失敗15分ロックアウトのレート制限、30分非操作セッションタイムアウト、company_idによるマルチテナントデータ分離、無料プラン（資産5件・部門1つまで）/有料プラン（無制限）の管理、管理者パネル（全アカウント一覧・プラン切替・代理ログイン・パスワード認証）を備え、DATA_VERSIONメカニズムによるデプロイ時の全クライアント自動データリセット、設定画面からの全データクリア（確認付き）と国変更（データリセットを伴う）、英語/日本語の200以上の翻訳キーによる多言語対応（ヘッダーおよび設定画面での切替、localStorageへの保存）、rust_decimalによる高精度金額計算（Option\<Decimal\>のカスタムserde文字列シリアライズでJS浮動小数点精度損失を回避）、IndexedDB v2（assets・photosオブジェクトストア）とlocalStorage（会社設定・部門・セッション・言語・会計基準）によるクライアントサイドデータ永続化、Vercelへの静的SPAデプロイ（CSP・X-Frame-Options DENY・HSTS・X-Content-Type-Options nosniff等のセキュリティヘッダー、WASMの長期キャッシュ、SPAフォールバックリライト、オプショナルBasic認証）、OGP/Twitterカード/JSON-LD構造化データのSEOメタタグ、11ヶ国別SEOランディングページ（ジオリダイレクト付き）＋専用LPページ（/lp）、利用規約ページ、デモアカウント3件の自動シード、LTO＋opt-level=zによるWASMサイズ最適化ビルドを備えた、包括的な固定資産管理システムである。
 
 ## Tech Stack
 
-- **Rust / WebAssembly** — Leptos 0.7 CSR (Client-Side Rendering)
+- **Rust / WebAssembly** — Leptos 0.8 CSR (Client-Side Rendering)
 - **Tailwind CSS** — mobile-first responsive design
 - **IndexedDB v2** — client-side asset & photo storage
 - **localStorage** — company setup, departments, user sessions
@@ -166,12 +166,17 @@ Admin Panel: `/admin`（admin@example.com のパスワードが必要）
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Add WebAssembly target
-rustup target add wasm32-unknown-unknown
+# Install the pinned toolchain and WebAssembly target
+rustup toolchain install 1.98.1 --profile minimal --component clippy,rustfmt --target wasm32-unknown-unknown
 
 # Install Trunk
-cargo install trunk
+cargo install trunk --version 0.21.14 --locked
 ```
+
+The repository pins Rust 1.98.1, Vercel CLI 59.16.0 and Tailwind CSS 3.4.19.
+Leptos 0.8 and all resolved Rust dependencies are recorded in `Cargo.lock`.
+Tailwind stays on v3 to preserve the existing styles and browser compatibility.
+Run `npm ci` before using the npm build and deployment commands.
 
 ## Local Development
 
@@ -184,7 +189,7 @@ Open http://localhost:8080. Trunk watches `src/`, `locales/`, `index.html`, `inp
 ## Production Build
 
 ```bash
-trunk build --release
+npm run build
 ```
 
 Output: `dist/` directory. Release profile applies LTO and `opt-level = "z"`.
@@ -192,16 +197,16 @@ Output: `dist/` directory. Release profile applies LTO and `opt-level = "z"`.
 ## Deploy to Vercel
 
 ```bash
-# Install Vercel CLI
-npm i -g vercel
+# Install the project-pinned Vercel CLI
+npm ci
 
 # Login and link
-vercel login
-vercel link
+npx --no-install vercel login
+npx --no-install vercel link
 
 # Set Basic Auth (optional)
-vercel env add BASIC_AUTH_USER
-vercel env add BASIC_AUTH_PASS
+npx --no-install vercel env add BASIC_AUTH_USER
+npx --no-install vercel env add BASIC_AUTH_PASS
 
 # Deploy
 ./scripts/deploy.sh

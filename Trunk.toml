@@ -6,3 +6,6 @@ watch = ["src", "locales", "index.html", "input.css"]
 
 [serve]
 port = 8080
+
+[tools]
+tailwindcss = "3.4.19"

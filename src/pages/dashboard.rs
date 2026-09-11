@@ -19,7 +19,7 @@ pub fn DashboardPage() -> impl IntoView {
             <Suspense fallback=move || view! { <LoadingSpinner /> }>
                 {move || {
                     assets.get().map(|data| {
-                        let assets_vec: Vec<Asset> = (*data).clone();
+                        let assets_vec: Vec<Asset> = data;
                         if assets_vec.is_empty() {
                             view! {
                                 <EmptyState

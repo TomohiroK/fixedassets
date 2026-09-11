@@ -101,7 +101,7 @@ pub fn AssetRegisterPage() -> impl IntoView {
             <Suspense fallback=move || view! { <p class="text-sm text-gray-500">{move || i18n.t("common.loading")}</p> }>
                 {move || {
                     limit_check.get().map(|result| {
-                        let (can_register, count) = *result;
+                        let (can_register, count) = result;
                         if can_register {
                             view! {
                                 <div>

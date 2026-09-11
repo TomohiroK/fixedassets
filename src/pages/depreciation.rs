@@ -43,7 +43,7 @@ pub fn DepreciationPage() -> impl IntoView {
     // Filter assets by scope
     let filtered_assets = move || -> Vec<Asset> {
         let all = match assets_resource.get() {
-            Some(a) => (*a).clone(),
+            Some(a) => a,
             None => return vec![],
         };
         let s = scope.get();
@@ -356,7 +356,7 @@ pub fn DepreciationPage() -> impl IntoView {
     // ========================
     let category_summary = move || -> Vec<(Category, String, u32, Decimal, Decimal, Decimal)> {
         let all = match assets_resource.get() {
-            Some(a) => (*a).clone(),
+            Some(a) => a,
             None => return vec![],
         };
         let target_ym = sel_year.get() * 12 + sel_month.get();

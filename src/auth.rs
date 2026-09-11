@@ -58,7 +58,7 @@ struct LoginAttempts {
 // ─── Hashing helpers ────────────────────────────────────────────────
 fn generate_salt() -> String {
     let mut buf = [0u8; 16];
-    getrandom::getrandom(&mut buf).unwrap_or_default();
+    getrandom::fill(&mut buf).expect("Secure randomness is required for password salts");
     hex::encode(buf)
 }
 
@@ -696,4 +696,37 @@ pub fn run_inactive_account_cleanup() {
 
     // Record last run time
     store_string(CLEANUP_LAST_RUN_KEY, &now.to_string());
+}
+
+#[cfg(test)]
+mod dependency_upgrade_tests {
+    use super::*;
+
+    #[test]
+    fn stored_password_hash_remains_compatible() {
+        let expected = "49614bf72be51f7fa701652d5b8255c93e63ff5cd96c0fece98627b6f1682a0a";
+        assert!(verify_password("Password123", "00112233445566778899aabbccddeeff", expected));
+        assert!(!verify_password("wrong", "00112233445566778899aabbccddeeff", expected));
+    }
+
+    #[test]
+    fn salts_remain_random_16_byte_hex_strings() {
+        let first = generate_salt();
+        let second = generate_salt();
+        assert_eq!(hex::decode(&first).unwrap().len(), 16);
+        assert_ne!(first, second);
+        assert_ne!(first, "0".repeat(32));
+    }
+
+    #[test]
+    fn stored_user_preserves_legacy_fields() {
+        let original = r#"{"email":"test@example.com","name":"Test","password_hash":"abc","salt":"def"}"#;
+        let user: StoredUser = serde_json::from_str(original).unwrap();
+        let encoded = serde_json::to_string(&user).unwrap();
+        let restored: StoredUser = serde_json::from_str(&encoded).unwrap();
+        assert_eq!(restored.password_hash, "abc");
+        assert_eq!(restored.salt, "def");
+        assert!(!restored.paid);
+        assert!(restored.company_id.is_empty());
+    }
 }

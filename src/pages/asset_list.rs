@@ -34,7 +34,7 @@ pub fn AssetListPage() -> impl IntoView {
             <Suspense fallback=move || view! { <LoadingSpinner /> }>
                 {move || {
                     assets.get().map(|data| {
-                        let assets_vec: Vec<Asset> = (*data).clone();
+                        let assets_vec: Vec<Asset> = data;
                         let query = search_query.get().to_lowercase();
                         let cat_filter = selected_category.get();
 
